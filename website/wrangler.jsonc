@@ -1,0 +1,63 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "website",
+	"main": ".svelte-kit/cloudflare/_worker.js",
+	"compatibility_date": "2026-05-18",
+	"compatibility_flags": [
+		"nodejs_compat",
+		"nodejs_als"
+	],
+	"assets": {
+		"binding": "ASSETS",
+		"directory": ".svelte-kit/cloudflare"
+	},
+	"observability": {
+		"enabled": true
+	},
+	"upload_source_maps": true,
+	/**
+	 * Rate Limiting bindings — 사용자당 (X-Client-Id) 호출 제한.
+	 * - RATE_LIMIT_LLM : 분당 10회 (preference / recipe / chat/refine)
+	 * - RATE_LIMIT_PLAIN: 분당 30회 (beans 등 LLM 미사용 경로)
+	 * 바인딩이 없으면 ratelimit.ts 가 자동으로 인메모리 폴백을 사용한다.
+	 */
+	"ratelimits": [
+		{
+			"name": "RATE_LIMIT_LLM",
+			"namespace_id": "1001",
+			"simple": { "limit": 10, "period": 60 }
+		},
+		{
+			"name": "RATE_LIMIT_PLAIN",
+			"namespace_id": "1002",
+			"simple": { "limit": 30, "period": 60 }
+		}
+	]
+	/**
+	 * Smart Placement
+	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+	 */
+	// "placement": {  "mode": "smart" }
+	/**
+	 * Bindings
+	 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
+	 * databases, object storage, AI inference, real-time communication and more.
+	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
+	 */
+	/**
+	 * Environment Variables
+	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+	 * Note: Use secrets to store sensitive data.
+	 * https://developers.cloudflare.com/workers/configuration/secrets/
+	 */
+	// "vars": {  "MY_VARIABLE": "production_value" }
+	/**
+	 * Service Bindings (communicate between multiple Workers)
+	 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
+	 */
+	// "services": [  {   "binding": "MY_SERVICE",   "service": "my-service"  } ]
+}

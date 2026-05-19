@@ -28,3 +28,8 @@ venv/
 
 # Docker
 *.pid
+
+fix.md
+info.md
+plan.md
+.dev.vars
