@@ -5,7 +5,7 @@
 > 배포: <https://morgorithm.dotoroi.xyz/>
 > 2026 Algorithm Team Project
 
-상세 구현 결정과 변경 이력은 [`plan.md`](plan.md), 고객 체험 기반 UX 수정 이력은 [`fix.md`](fix.md), 커피 도메인 레퍼런스(원두·로스팅·추출·메뉴·5축 매핑)는 [`info.md`](info.md).
+상세 구현 결정과 변경 이력은 [`plan.md`](plan.md), 고객 체험 기반 UX 수정 이력은 [`fix.md`](fix.md), 커피 도메인 레퍼런스(원두·로스팅·추출·메뉴·5축 매핑)는 [`info.md`](info.md) — 셋 다 로컬 작업 노트로 repo 에는 포함되지 않는다.
 
 ---
 
@@ -56,12 +56,13 @@ POST /api/chat/{propose|refine}  (intent=ask)
 
 | 알고리즘 | 위치 | 역할 |
 |----------|------|------|
-| Merge Sort (안정 정렬) | [`sorting.ts`](website/src/lib/algorithms/sorting.ts) | 적합도 내림차순, 동률은 생성 순서 보존 |
-| Quick Sort (Lomuto) | [`sorting.ts`](website/src/lib/algorithms/sorting.ts) | 보조 정렬 |
+| Merge Sort (안정 정렬) | [`sorting.ts`](website/src/lib/algorithms/sorting.ts) | 적합도 내림차순(동률은 생성 순서 보존) · 원두 가격 오름차순 — 메뉴/원두 양쪽에서 사용 |
 | Greedy (원두) | [`greedy.ts`](website/src/lib/algorithms/greedy.ts) | 적합도 임계치 이상 원두 가격 오름차순 top-k |
 | Greedy (메뉴 하이브리드) | [`combineEntries`](website/src/routes/api/chat/propose/+server.ts) | 두 라이브러리 항목 특징을 합쳐 하이브리드 spec |
 | Diversify (그리디 재배치) | [`diversify.ts`](website/src/lib/algorithms/diversify.ts) | 정렬 결과에서 동일 카테고리 연속 회피 |
 | 5축 유사도 점수 | [`score.ts`](website/src/lib/algorithms/score.ts) | 절대 차이를 max 4 로 정규화한 평균(0~1) |
+
+`sorting.ts` 에는 Lomuto 파티션 Quick Sort 도 from-scratch 로 함께 구현되어 있다 — 수업 자료/대안 비교용 보존이며 현재 호출처는 없다.
 
 Python 원형(`merge_sort`, `quick_sort`, open-addressing `HashTable`, CLRS `RedBlackTree`)은 [`skeleton/app/algorithms/`](skeleton/app/algorithms/) 에 보존.
 
@@ -132,7 +133,7 @@ echo 'UPSTAGE_API_KEY="..."' > .dev.vars
 
 ```
 2026-Algorithm-Team-Project/
-├── README.md · plan.md · fix.md · info.md
+├── README.md                          # plan.md · fix.md · info.md 는 로컬 노트 (git 제외)
 │
 ├── website/                          # 운영 스택 — SvelteKit + Cloudflare
 │   ├── wrangler.jsonc
