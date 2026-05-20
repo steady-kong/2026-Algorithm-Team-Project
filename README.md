@@ -105,10 +105,10 @@ echo 'UPSTAGE_API_KEY="..."' > .dev.vars
 ## 로드맵
 
 - [ ] 다나와 크롤러 → 실 원두 데이터 (현재 mock 18종)
-- [ ] Hashing 캐시 (`(profile, constraints)` 정규화 키로 refine 캐싱)
+- [x] Hashing 캐시 (FNV-1a + from-scratch HashCache 로 refine 의 LLM patch 캐싱)
 - [ ] 본격 다국어 (현재 ko/en) — 일/중/스페인어 등 실수요 발생 시 paraglide-js 도입
 - [ ] 시연 준비 (강의실 전기 + 실제 추출)
-- [ ] 미사용 컴포넌트 정리
+- [x] 미사용 컴포넌트 정리
 
 ---
 

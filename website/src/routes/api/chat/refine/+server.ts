@@ -35,6 +35,7 @@ import {
 } from '$lib/server/recipe-generator';
 import { cupMatchScore } from '$lib/algorithms/score';
 import { mergeSort } from '$lib/algorithms/sorting';
+import { HashCache } from '$lib/algorithms/hash-cache';
 import {
 	isCategory,
 	isBrew,
@@ -225,6 +226,29 @@ interface Patch {
 	profile_delta: Partial<Record<keyof TasteProfile, number>>;
 	category_hint: MenuCategory | null;
 	assistant_text: string;
+}
+
+/**
+ * LLM patch 캐시 (from-scratch HashCache).
+ *
+ * 가장 비싼 연산인 LLM 호출(runLLMPatch)만 캐싱한다. 키는 (locale, message, contextHint)
+ * — runLLMPatch 의 실제 입력 그대로다. 후보 생성(variants/alt)은 캐싱하지 않으므로
+ * exclude_ids 기반 신선도와 Date.now 식별자는 매 요청 새로 계산된다.
+ *
+ * 모듈 스코프라 한 isolate 가 살아있는 동안만 유지된다(Workers stateless). 캐시는
+ * 값 의미론으로 다룬다 — Patch 는 핸들러에서 변이되므로 set/ get 양쪽에서 복제해
+ * 캐시 항목 오염을 막는다.
+ */
+const patchCache = new HashCache<Patch>(256);
+
+function clonePatch(p: Patch): Patch {
+	return {
+		intent: p.intent,
+		constraints: { ...p.constraints },
+		profile_delta: { ...p.profile_delta },
+		category_hint: p.category_hint,
+		assistant_text: p.assistant_text
+	};
 }
 
 /** 폴백 assistant_text 의 한/영 문구 매핑. ruleBasedPatch 내부에서만 사용. */
@@ -1119,8 +1143,23 @@ export const POST: RequestHandler = async (event) => {
 		`기존 제약=${JSON.stringify(oldConstraints)}`;
 
 	const locale: Locale = detectLocale(message);
-	const patch =
-		(await runLLMPatch(event.platform, message, contextHint, locale)) ?? ruleBasedPatch(message, locale);
+
+	// LLM patch 캐시 조회 — 같은 대화 상태(contextHint) + 같은 메시지면 LLM 호출을 건너뛴다.
+	const patchKey = `${locale} ${message} ${contextHint}`;
+	const cachedPatch = patchCache.get(patchKey);
+	let patch: Patch;
+	if (cachedPatch) {
+		patch = clonePatch(cachedPatch); // 이후 변이되므로 캐시본과 분리
+	} else {
+		const llm = await runLLMPatch(event.platform, message, contextHint, locale);
+		if (llm) {
+			patchCache.set(patchKey, clonePatch(llm)); // 격리 스냅샷 저장
+			patch = llm;
+		} else {
+			// 규칙 기반 폴백은 결정적·저비용 → 캐싱하지 않는다(LLM 복구 후 staleness 방지).
+			patch = ruleBasedPatch(message, locale);
+		}
+	}
 
 	// 방어: adjust/explore 의도에서 LLM 이 실수로 category_only 를 넣어도 떼어낸다.
 	if (

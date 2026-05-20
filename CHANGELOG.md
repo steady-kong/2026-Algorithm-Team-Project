@@ -16,6 +16,20 @@
 
 ## 2026-05-20
 
+### 15:30 · 김세중 (Claude 보조)
+- **로드맵 · Hashing 캐시**: refine 의 LLM patch 를 from-scratch 해시 캐시로 캐싱
+  - 이유: 같은 대화 상태 + 같은 메시지의 재요청에서 가장 비싼 LLM 호출(runLLMPatch)을 건너뛰기 위함. README 로드맵 "Hashing 캐시" 항목 처리.
+  - 신규 파일: `website/src/lib/algorithms/hash-cache.ts`
+    - `fnv1a32`: FNV-1a 32비트 문자열 해시 (UTF-16 하위·상위 바이트 혼합 → 한글 충돌 감소)
+    - `HashCache<V>`: 분리 연쇄(separate chaining) + 용량 상한 + LRU 제거. `Map` 비의존, mergeSort 와 같은 from-scratch 원칙. 버킷 수는 2의 거듭제곱(비트 마스크 인덱싱), LRU 는 단조 클럭 tick 기반 O(n) 제거(규모상 의도적 단순화).
+  - refine 와이어링: `src/routes/api/chat/refine/+server.ts`
+    - 키 = `(locale, message, contextHint)` — runLLMPatch 의 실제 입력 그대로. contextHint 가 profile·constraints·선택메뉴·카테고리·기구를 모두 인코딩.
+    - 후보 생성(variants/alt)은 캐싱 안 함 → exclude_ids 기반 신선도와 Date.now 식별자는 매 요청 새로 계산.
+    - Patch 는 핸들러에서 변이되므로 set/get 양쪽에서 `clonePatch` 로 복제(값 의미론) → 캐시 오염 방지. 규칙 기반 폴백은 캐싱 안 함(LLM 복구 후 staleness 방지).
+    - 모듈 스코프 캐시 → Workers stateless 특성상 한 isolate 생존 동안만 유지(용량 256 상한).
+  - 검증: `npm run check` 통과(322 파일/0 errors) + `npm run lint` 0 errors + 해시/LRU/분리연쇄 런타임 테스트 12건 통과(esbuild+node).
+- **문서**: README 로드맵에서 "Hashing 캐시", "미사용 컴포넌트 정리"(직전 커밋 완료분) 체크.
+
 ### 14:00 · 김세중 (Claude 보조)
 - **P1 · 린트 정리**: `npm run lint` 에러 6개 해소 (0 errors)
   - `src/lib/data/bean-hints.ts`: 미사용 `SUMATRA_DARK` → `cold_brew` 디폴트로 연결
