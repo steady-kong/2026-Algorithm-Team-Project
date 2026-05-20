@@ -82,7 +82,7 @@ const CATEGORY_DEFAULTS: Record<MenuCategory, BeanHint> = {
 	macchiato: BRAZIL_MEDIUM_DARK,
 	cortado: GUATEMALA_MEDIUM,
 	affogato: BRAZIL_MEDIUM_DARK,
-	cold_brew: BRAZIL_MEDIUM_DARK,
+	cold_brew: SUMATRA_DARK,
 	iced_americano: BRAZIL_COLOMBIA_BLEND,
 	dalgona: DALGONA_INSTANT
 };

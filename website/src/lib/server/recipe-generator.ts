@@ -445,7 +445,7 @@ function buildCategorySteps(
 			duration_sec: 180
 		});
 		out.push({
-			order: order++,
+			order: order,
 			description: '잔에 우유와 얼음을 채우고, 휘핑한 달고나 크림을 위에 얹기',
 			duration_sec: 30
 		});
@@ -458,7 +458,7 @@ function buildCategorySteps(
 		});
 		if (milk !== 'none') {
 			out.push({
-				order: order++,
+				order: order,
 				description: '취향에 따라 우유나 시럽을 살짝 더해 마무리',
 				duration_sec: null
 			});
@@ -496,19 +496,19 @@ function buildCategorySteps(
 
 	if (category === 'mocha') {
 		out.push({
-			order: order++,
+			order: order,
 			description: '잔 바닥에 초콜릿 소스 20ml 를 두르고, 그 위로 에스프레소 → 우유 순으로 결합',
 			duration_sec: null
 		});
 	} else if (syrups.length > 0) {
 		out.push({
-			order: order++,
+			order: order,
 			description: '잔에 시럽을 먼저 넣고, 에스프레소 → 우유 순서로 결합',
 			duration_sec: null
 		});
 	} else if (milk !== 'none' && category !== 'black' && category !== 'iced_americano') {
 		out.push({
-			order: order++,
+			order: order,
 			description: '잔에 에스프레소를 받고 데운 우유를 부드럽게 부어 완성',
 			duration_sec: null
 		});
