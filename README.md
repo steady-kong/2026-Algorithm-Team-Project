@@ -11,7 +11,7 @@
 > **Security notice — `morgorithm.dotoroi.xyz`**
 > This domain is maintained **temporarily** by [`server3342`](https://github.com/server3342). **It may disappear without notice or be transferred to a malicious third party at any time.** **Do not enter sensitive information such as personal data.**
 
-[`plan.md`](plan.md), [`fix.md`](fix.md), [`info.md`](info.md) — 셋 다 로컬 작업 노트로 repo 에는 포함되지 않는다.
+[`plan.md`](plan.md), [`fix.md`](fix.md), [`info.md`](info.md), `upstage.md` — 모두 로컬 작업 노트로 repo 에는 포함되지 않는다.
 
 ---
 
@@ -149,7 +149,7 @@ echo 'UPSTAGE_API_KEY="..."' > .dev.vars
 
 ```
 2026-Algorithm-Team-Project/
-├── README.md                          # plan.md · fix.md · info.md 는 로컬 노트 (git 제외)
+├── README.md                          # plan.md · fix.md · info.md · upstage.md 는 로컬 노트 (git 제외)
 │
 ├── website/                          # 운영 스택 — SvelteKit + Cloudflare
 │   ├── wrangler.jsonc
@@ -164,7 +164,8 @@ echo 'UPSTAGE_API_KEY="..."' > .dev.vars
 │           ├── data/         recipe-library · beans_mock · coffee-knowledge · story-hooks · bean-hints
 │           ├── server/       upstage(chatJson · chatWithTools) · tools · validate · recipe-generator · preference-rules · security · ratelimit
 │           ├── types/        taste · brew · recipe · bean · menu · constraints · proposal
-│           ├── components/   Composer · ChatBubble · ProposalCards · RecipeDetail
+│           ├── components/   Composer · ChatBubble · ProposalCards · RecipeDetail · ui/(Card·Stars·ThemeToggle)
+│           ├── util/         intent · locale · recipe-detail · uuid
 │           └── stores/       client-id · theme · chat-session (localStorage)
 │
 └── skeleton/                         # 알고리즘 원형 (Python) — 운영 미사용

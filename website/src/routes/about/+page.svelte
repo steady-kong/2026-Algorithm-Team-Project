@@ -502,10 +502,20 @@
 		>
 			{#if detail}
 				<div class="flex flex-col gap-2">
-					<div class="flex items-center gap-2">
-						<span class="text-lg" aria-hidden="true">{detail.icon}</span>
-						<span class="m3-label rounded-full bg-surface-container-highest px-2 py-0.5 text-on-surface-variant"
-							>{KIND_LABEL[detail.kind]}</span
+					<div class="flex items-center justify-between gap-2">
+						<div class="flex items-center gap-2">
+							<span class="text-lg" aria-hidden="true">{detail.icon}</span>
+							<span class="m3-label rounded-full bg-surface-container-highest px-2 py-0.5 text-on-surface-variant"
+								>{KIND_LABEL[detail.kind]}</span
+							>
+						</div>
+						<button
+							class="m3-label shrink-0 rounded-full px-2 py-0.5 text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
+							onclick={() => {
+								pause();
+								stepIndex = -1;
+								selectedId = null;
+							}}>← 범례로 돌아가기</button
 						>
 					</div>
 					<h2 class="m3-title break-keep">{detail.label}</h2>
