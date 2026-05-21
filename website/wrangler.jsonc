@@ -11,6 +11,9 @@
 		"nodejs_compat",
 		"nodejs_als"
 	],
+	// 커스텀 도메인(morgorithm.dotoroi.xyz)만 사용 — *.workers.dev 와 버전별 Preview URL 노출 차단.
+	"workers_dev": false,
+	"preview_urls": false,
 	"assets": {
 		"binding": "ASSETS",
 		"directory": ".svelte-kit/cloudflare"

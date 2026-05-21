@@ -42,7 +42,7 @@
 			why: '사용자 입력은 데이터로만 취급해 프롬프트 인젝션을 차단한다.'
 		},
 		p_trivial: {
-			label: '무의미 입력?',
+			label: '무의미한 입력인가?',
 			sub: 'isTrivialGreeting',
 			kind: 'decision',
 			icon: '◆',
@@ -57,7 +57,7 @@
 			what: 'LLM 없이 "어떤 걸 원하세요?" 로 한 번 더 구체화를 유도한다.'
 		},
 		p_key: {
-			label: 'UPSTAGE 키 있음?',
+			label: 'UPSTAGE API 호출에 성공했는가?',
 			kind: 'decision',
 			icon: '◆',
 			file: 'server/upstage.ts',
@@ -106,7 +106,7 @@
 			what: '답하기 전 검증된 자료를 조회해 근거를 확보. found=false 면 수치·연도를 지어내지 않는다.'
 		},
 		p_terminal: {
-			label: '어떤 종결 도구?',
+			label: '어떤 종결 도구를 호출했는가?',
 			kind: 'decision',
 			icon: '◆',
 			what: 'present_answer → 지식 답변, present_recommendations → 알고리즘 랭킹. 종결 없이 끝나거나 후보 0개면 폴백으로 강하.'
@@ -224,7 +224,7 @@
 			what: '키 없음/실패 시 정규식으로 "더 진하게→bitterness +1" 같은 delta 를 추출한다.'
 		},
 		r_intent: {
-			label: 'intent = ask?',
+			label: 'intent 가 ask 인가?',
 			kind: 'decision',
 			icon: '◆',
 			what: '지식 질문이면 답변만, 그 외엔 현재 추천에 패치를 적용한다.'
@@ -282,8 +282,8 @@
 			kind: 'branch',
 			id: 'p_key',
 			outcomes: [
-				{ label: '키 있음', tone: 'happy' },
-				{ label: '키 없음 / 실패', tone: 'fail', target: 'p_fb_rule' }
+				{ label: '호출 성공', tone: 'happy' },
+				{ label: 'API 호출 실패', tone: 'fail', target: 'p_fb_rule' }
 			]
 		},
 		{ kind: 'node', id: 'p_toolloop' },
@@ -578,24 +578,12 @@
 				</button>
 			{/snippet}
 
-			<!-- 분기 곁가지 한 칸: [라벨+화살표 헤더(고정 높이)] + [카드] — 헤더 높이를 고정해 칸마다 카드 윗변이 일직선으로 맞는다. -->
 			{#snippet tonePill(label: string, tone: Outcome['tone'])}
 				<span
 					class="m3-label max-w-full rounded-lg px-2 py-0.5 text-center leading-tight [overflow-wrap:anywhere] {TONE_STYLE[
 						tone
 					]}">{label}</span
 				>
-			{/snippet}
-
-			{#snippet offramp(oc: Outcome)}
-				<div class="flex h-full flex-col">
-					<div class="flex h-12 flex-col items-center justify-center gap-1">
-						{@render tonePill(oc.label, oc.tone)}
-						<span class="text-outline" aria-hidden="true">▾</span>
-					</div>
-					{#if oc.target}<div class="flex-1">{@render nodeCard(oc.target, true)}</div>{/if}
-					{#if oc.note}<span class="m3-label mt-1.5 text-center text-on-surface-variant">{oc.note}</span>{/if}
-				</div>
 			{/snippet}
 
 			<div class="mx-auto flex w-full max-w-xl flex-col">
@@ -609,15 +597,17 @@
 						{@const cont = block.outcomes.find((o) => !o.target)}
 						<div class="w-full">{@render nodeCard(block.id)}</div>
 						{@render connector()}
-						<!-- 균일 3열 그리드: 곁가지는 좌(1열)·우(3열), 계속 경로(가운데)는 라벨만 두고 다음 블록 화살표로 직진. -->
-						<div class="grid grid-cols-3 items-stretch gap-3">
-							<div>{#if sides[0]}{@render offramp(sides[0])}{/if}</div>
-							<div class="flex h-12 items-center justify-center">
-								{#if cont}
-									{@render tonePill(cont.label, cont.tone)}
-								{/if}
-							</div>
-							<div>{#if sides[1]}{@render offramp(sides[1])}{/if}</div>
+						{@const left = sides[0]}
+						{@const right = sides[1]}
+						<!-- 3열×3행(라벨/화살표/카드) 그리드 — 행이 칸마다 일직선 정렬되고 좌우 카드 높이가 같다. 가운데=계속 경로(라벨만). -->
+						<div class="grid grid-cols-3 gap-x-3" style="grid-template-rows: auto auto 1fr;">
+							<div class="col-start-1 row-start-1 flex items-center justify-center">{#if left}{@render tonePill(left.label, left.tone)}{/if}</div>
+							<div class="col-start-2 row-start-1 flex items-center justify-center">{#if cont}{@render tonePill(cont.label, cont.tone)}{/if}</div>
+							<div class="col-start-3 row-start-1 flex items-center justify-center">{#if right}{@render tonePill(right.label, right.tone)}{/if}</div>
+							<div class="col-start-1 row-start-2 flex justify-center py-1">{#if left}<span class="text-outline" aria-hidden="true">▾</span>{/if}</div>
+							<div class="col-start-3 row-start-2 flex justify-center py-1">{#if right}<span class="text-outline" aria-hidden="true">▾</span>{/if}</div>
+							<div class="col-start-1 row-start-3 flex flex-col gap-1.5">{#if left?.target}<div class="flex-1">{@render nodeCard(left.target, true)}</div>{/if}{#if left?.note}<span class="m3-label text-center text-on-surface-variant">{left.note}</span>{/if}</div>
+							<div class="col-start-3 row-start-3 flex flex-col gap-1.5">{#if right?.target}<div class="flex-1">{@render nodeCard(right.target, true)}</div>{/if}{#if right?.note}<span class="m3-label text-center text-on-surface-variant">{right.note}</span>{/if}</div>
 						</div>
 					{:else if block.kind === 'chain'}
 						<div class="rounded-2xl border border-dashed border-outline-variant bg-surface-container/40 p-4">
