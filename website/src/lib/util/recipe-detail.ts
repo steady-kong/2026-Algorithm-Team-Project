@@ -131,11 +131,18 @@ export function deriveSteps(recipe: Recipe): DerivedStep[] {
 		duration_sec: s.duration_sec
 	}));
 
-	// 우유 스팀이 필요한 메뉴면 단계 추가.
+	// 서버(buildCategorySteps)가 이미 우유 스팀/결합/토핑 단계를 넣었으면 중복 추가 금지 (M6).
+	// recipe.steps 기준으로 먼저 판정한 뒤에만 보강한다.
+	const hasMilkStep = steps.some((s) => /스팀|콜드폼|거품|데우거나/.test(s.description));
+	const hasCombineStep = steps.some((s) => /→\s*우유|부드럽게 부어/.test(s.description));
+	const hasToppingStep = steps.some((s) => /토핑/.test(s.description));
+
+	// 우유 스팀이 필요한 메뉴면 단계 추가 (이미 없을 때만).
 	if (
-		recipe.milk_treatment === 'steamed' ||
-		recipe.milk_treatment === 'microfoam' ||
-		recipe.milk_treatment === 'cold_foam'
+		!hasMilkStep &&
+		(recipe.milk_treatment === 'steamed' ||
+			recipe.milk_treatment === 'microfoam' ||
+			recipe.milk_treatment === 'cold_foam')
 	) {
 		const ml = recipe.menu_category ? CATEGORY_MILK_ML[recipe.menu_category] : undefined;
 		const amount = ml ? `${ml}ml ` : '';
@@ -152,10 +159,10 @@ export function deriveSteps(recipe: Recipe): DerivedStep[] {
 		});
 	}
 
-	// 시럽/초콜릿이 있으면 결합 단계 안내.
+	// 시럽/초콜릿이 있으면 결합 단계 안내 (이미 없을 때만).
 	if (
-		(recipe.syrups && recipe.syrups.length > 0) ||
-		recipe.menu_category === 'mocha'
+		!hasCombineStep &&
+		((recipe.syrups && recipe.syrups.length > 0) || recipe.menu_category === 'mocha')
 	) {
 		steps.push({
 			order: steps.length + 1,
@@ -164,7 +171,7 @@ export function deriveSteps(recipe: Recipe): DerivedStep[] {
 		});
 	}
 
-	if (recipe.topping && recipe.topping !== 'none') {
+	if (!hasToppingStep && recipe.topping && recipe.topping !== 'none') {
 		steps.push({
 			order: steps.length + 1,
 			description: `${TOPPING_LABELS[recipe.topping]} 토핑 올리기`,
@@ -181,10 +188,20 @@ export function recipeTitle(recipe: Recipe): string {
 	return BREW_METHOD_LABELS[recipe.brew_method];
 }
 
+/**
+ * 초 단위를 사람이 읽는 표기로 변환 (M3).
+ * 콜드브루 침출처럼 1시간 이상이면 "약 N시간" — 분/초 원시 노출(예: "720분"·"43110초") 금지.
+ */
+export function formatDuration(sec: number): string {
+	if (sec >= 3600) return `약 ${Math.round(sec / 3600)}시간`;
+	if (sec >= 60) {
+		const min = Math.floor(sec / 60);
+		const s = sec % 60;
+		return s === 0 ? `약 ${min}분` : `약 ${min}분 ${s}초`;
+	}
+	return `약 ${sec}초`;
+}
+
 export function totalTimeText(recipe: Recipe): string {
-	const t = recipe.total_time_sec;
-	if (t < 60) return `약 ${t}초`;
-	const min = Math.floor(t / 60);
-	const sec = t % 60;
-	return sec === 0 ? `약 ${min}분` : `약 ${min}분 ${sec}초`;
+	return formatDuration(recipe.total_time_sec);
 }

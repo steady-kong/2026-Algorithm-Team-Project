@@ -6,6 +6,8 @@ import type { MenuCategory, MilkType, AromaType, SyrupType } from './menu';
  */
 export interface Constraints {
 	exclude_brew_method?: BrewMethod[];
+	/** 기구를 이걸로 바꾸라는 양성 타깃 (드립/푸어오버 등 전환 요청). exclude 와 달리 "이 기구로" 지정. */
+	brew_method?: BrewMethod;
 	milk_type?: MilkType;
 	exclude_milk?: boolean;
 	exclude_aroma?: AromaType[];

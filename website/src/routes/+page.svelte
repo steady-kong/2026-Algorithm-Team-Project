@@ -63,6 +63,8 @@
 			context = restored.context;
 			originalCategories = restored.originalCategories;
 			shownLibraryIds = restored.shownLibraryIds;
+			// 복원 시 마지막 칩도 함께 살려, 하단 추천 질문이 정적 폴백으로 떨어지지 않게 한다.
+			serverSuggestions = restored.serverSuggestions;
 			restoredNotice = true;
 			void scrollToBottom();
 		}
@@ -82,7 +84,8 @@
 			messages,
 			context,
 			originalCategories,
-			shownLibraryIds
+			shownLibraryIds,
+			serverSuggestions
 		});
 	});
 

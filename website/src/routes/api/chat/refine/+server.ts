@@ -26,7 +26,8 @@ import {
 	requireProfile,
 	requireBrewMethod
 } from '$lib/server/validate';
-import { chatJson, LLMResponseError, NotConfiguredError } from '$lib/server/upstage';
+import { chatJson, chatWithTools, LLMResponseError, NotConfiguredError } from '$lib/server/upstage';
+import { buildRefineTools } from '$lib/server/tools';
 import {
 	buildMenuCandidates,
 	ruleBasedGenerate,
@@ -34,9 +35,11 @@ import {
 	type Constraints
 } from '$lib/server/recipe-generator';
 import { cupMatchScore } from '$lib/algorithms/score';
+import { mergeSort } from '$lib/algorithms/sorting';
 import type { BeanHint, Recipe } from '$lib/types/recipe';
 import { GRIND_ORDER, type GrindSize } from '$lib/types/recipe';
-import { BREW_METHODS, type BrewMethod } from '$lib/types/brew';
+import { BREW_METHODS, BREW_METHOD_LABELS, type BrewMethod } from '$lib/types/brew';
+import { detectBrewIntent } from '$lib/util/intent';
 import { TASTE_DIMENSIONS, clampLevel, type TasteProfile } from '$lib/types/taste';
 import {
 	MENU_CATEGORIES,
@@ -64,7 +67,7 @@ import {
 } from '$lib/data/recipe-library';
 import { KNOWLEDGE_DIGEST, findAnswer, looksLikeQuestion } from '$lib/data/coffee-knowledge';
 import { pickRelatedQuestions, type ProposalShape } from '$lib/data/story-hooks';
-import { detectLocale, languageDirective, type Locale } from '$lib/util/locale';
+import { detectLocale, languageDirective, clampToSentence, type Locale } from '$lib/util/locale';
 
 const SYSTEM_PROMPT =
 	'너는 카페 어시스턴트다. 사용자의 후속 요청을 읽고, 현재 추천을 어떻게 ' +
@@ -83,7 +86,7 @@ const SYSTEM_PROMPT =
 	'\n  },' +
 	'\n  "profile_delta": { "acidity": int(-2..2), "body": int, "sweetness": int, "bitterness": int, "roast_level": int },' +
 	'\n  "category_hint": MenuCategory | null,' +
-	'\n  "assistant_text": "한 줄짜리 응답 (사용자 입력과 동일 언어로 작성)"' +
+	'\n  "assistant_text": "한 줄 응답 (사용자 입력과 동일 언어). 고객 언어로 자연스럽게 — 로스팅/바디/산미 같은 내부 5축 용어 대신 묵직하게/진하게/산뜻하게/부드럽게 같은 일상 표현으로."' +
 	'\n}' +
 	'\n\nintent 가이드:' +
 	'\n  - "더 달게/덜 달게/오트로 바꿔/더 진하게/휘핑 추가" 같이 **선택한 메뉴 위에 살짝 변형**을 가하는 경우 → "adjust"' +
@@ -149,6 +152,7 @@ function sanitizeConstraints(raw: unknown): Constraints {
 		const v = o.exclude_brew_method.filter(isBrew) as BrewMethod[];
 		if (v.length > 0) out.exclude_brew_method = v;
 	}
+	if (isBrew(o.brew_method)) out.brew_method = o.brew_method;
 	if (isMilk(o.milk_type)) out.milk_type = o.milk_type;
 	if (typeof o.exclude_milk === 'boolean' && o.exclude_milk) out.exclude_milk = true;
 	if (Array.isArray(o.exclude_aroma)) {
@@ -169,6 +173,7 @@ function sanitizeConstraints(raw: unknown): Constraints {
 		out.max_budget_krw = Math.floor(o.max_budget_krw);
 	return out;
 }
+
 
 /** 클라가 보내는 chosen_recipe 를 안전하게 파싱한다. 필드별 화이트리스트 통과. */
 function sanitizeChosenRecipe(raw: unknown): Recipe | null {
@@ -393,6 +398,76 @@ function ruleBasedPatch(message: string, locale: Locale = 'ko'): Patch {
 	return patch;
 }
 
+/** LLM(단발 또는 tool) 응답을 Patch 로 검증·정규화한다. 두 경로 공용. */
+function parsePatch(data: Record<string, unknown>, locale: Locale): Patch {
+	const intentRaw = data.intent;
+	const intent: Patch['intent'] =
+		intentRaw === 'swap' ||
+		intentRaw === 'remove' ||
+		intentRaw === 'adjust' ||
+		intentRaw === 'explore' ||
+		intentRaw === 'ask'
+			? intentRaw
+			: 'adjust';
+	const constraints = sanitizeConstraints(data.constraints);
+	const deltaRaw =
+		data.profile_delta && typeof data.profile_delta === 'object'
+			? (data.profile_delta as Record<string, unknown>)
+			: {};
+	const profile_delta: Patch['profile_delta'] = {};
+	for (const d of TASTE_DIMENSIONS) {
+		const v = clampDelta(deltaRaw[d]);
+		if (v !== 0) profile_delta[d] = v;
+	}
+	const category_hint = isCategory(data.category_hint) ? data.category_hint : null;
+	// ask 답변은 문장 경계로 자른 긴 본문(≤600, 중간에서 안 끊김), 그 외는 짧게(200).
+	const assistant_text =
+		typeof data.assistant_text === 'string' && data.assistant_text.trim()
+			? intent === 'ask'
+				? clampToSentence(data.assistant_text, 600)
+				: data.assistant_text.trim().slice(0, 200)
+			: locale === 'en'
+				? 'Here are updated picks based on your tweak.'
+				: '요청을 반영해 다시 추천드렸습니다.';
+	return { intent, constraints, profile_delta, category_hint, assistant_text };
+}
+
+function logPatchFallback(e: unknown, via: string): void {
+	if (e instanceof NotConfiguredError) {
+		console.info(`[chat/refine] UPSTAGE_API_KEY 미설정 → ${via}`);
+	} else if (e instanceof LLMResponseError) {
+		console.warn(`[chat/refine] Upstage 호출 실패 → ${via}:`, (e as Error).message);
+	} else {
+		console.error(`[chat/refine] 예기치 못한 오류 → ${via}`, e);
+	}
+}
+
+/** 1차 경로 — 함수 호출 루프로 패치 제출(present_patch). plan.md §50 refine 전환. */
+async function runToolPatch(
+	platform: App.Platform | undefined,
+	message: string,
+	contextHint: string,
+	locale: Locale
+): Promise<Patch | null> {
+	try {
+		const user = `현재 컨텍스트: ${contextHint}\n사용자 요청: ${message}`;
+		const directive = '아래 스키마를 present_patch 도구로 제출하라(자유 텍스트 응답 금지).\n';
+		const res = await chatWithTools(
+			platform,
+			languageDirective(locale) + directive + SYSTEM_PROMPT,
+			user,
+			buildRefineTools(locale),
+			{ timeoutMs: 18_000, maxSteps: 3 }
+		);
+		if (res.terminalName !== 'present_patch' || !res.terminalArgs) return null;
+		return parsePatch(res.terminalArgs, locale);
+	} catch (e) {
+		logPatchFallback(e, 'single-shot/규칙 폴백');
+		return null;
+	}
+}
+
+/** 2차 폴백 — 단발 JSON(chatJson). */
 async function runLLMPatch(
 	platform: App.Platform | undefined,
 	message: string,
@@ -402,41 +477,9 @@ async function runLLMPatch(
 	try {
 		const user = `현재 컨텍스트: ${contextHint}\n사용자 요청: ${message}`;
 		const data = await chatJson(platform, languageDirective(locale) + SYSTEM_PROMPT, user);
-		const intentRaw = data.intent;
-		const intent: Patch['intent'] =
-			intentRaw === 'swap' ||
-			intentRaw === 'remove' ||
-			intentRaw === 'adjust' ||
-			intentRaw === 'explore' ||
-			intentRaw === 'ask'
-				? intentRaw
-				: 'adjust';
-		const constraints = sanitizeConstraints(data.constraints);
-		const deltaRaw =
-			data.profile_delta && typeof data.profile_delta === 'object'
-				? (data.profile_delta as Record<string, unknown>)
-				: {};
-		const profile_delta: Patch['profile_delta'] = {};
-		for (const d of TASTE_DIMENSIONS) {
-			const v = clampDelta(deltaRaw[d]);
-			if (v !== 0) profile_delta[d] = v;
-		}
-		const category_hint = isCategory(data.category_hint) ? data.category_hint : null;
-		const assistant_text =
-			typeof data.assistant_text === 'string' && data.assistant_text.trim()
-				? data.assistant_text.trim().slice(0, 200)
-				: locale === 'en'
-					? 'Here are updated picks based on your tweak.'
-					: '요청을 반영해 다시 추천드렸습니다.';
-		return { intent, constraints, profile_delta, category_hint, assistant_text };
+		return parsePatch(data, locale);
 	} catch (e) {
-		if (e instanceof NotConfiguredError) {
-			console.info('[chat/refine] UPSTAGE_API_KEY 미설정 → 규칙 폴백');
-		} else if (e instanceof LLMResponseError) {
-			console.warn('[chat/refine] Upstage 호출 실패 → 규칙 폴백:', e.message);
-		} else {
-			console.error('[chat/refine] 예기치 못한 오류 → 규칙 폴백', e);
-		}
+		logPatchFallback(e, '규칙 폴백');
 		return null;
 	}
 }
@@ -612,6 +655,9 @@ const MOD_LABELS = {
 	noToppingTagline: { ko: '토핑을 빼서 단맛을 한층 덜었어요.', en: 'Skipping the topping cuts back the sweetness.' },
 	extraShotName: { ko: '샷 추가', en: 'Extra shot' },
 	extraShotTagline: { ko: '에스프레소 양을 늘려 묵직하고 진한 풍미를 살렸어요.', en: 'More espresso gives a heavier, more concentrated cup.' },
+	// 에스프레소가 없는 기구(콜드브루·드립·프렌치프레스 등)용 "더 진하게" — 샷/에스프레소 표현 금지 (M2).
+	strongerName: { ko: '더 진하게', en: 'Stronger' },
+	strongerTagline: { ko: '원두 비율을 높이고 물을 줄여 더 진하고 묵직하게 뽑았어요.', en: 'More grounds and less water for a heavier, bolder cup.' },
 	lessMilkName: { ko: '우유 살짝 줄인', en: 'Less milk' },
 	lessMilkTagline: { ko: '우유 비율을 줄여 커피 본연의 진함이 도드라져요.', en: 'A lower milk ratio lets the coffee come through.' },
 	weakerName: { ko: '연하게 내린', en: 'Lighter' },
@@ -766,11 +812,14 @@ function buildModSpecs(
 		}
 	}
 
-	// 진하기 ↑
+	// 진하기 ↑ — "샷 추가/에스프레소"는 에스프레소 머신에서만. 콜드브루·드립 등은 "더 진하게"(M2).
 	if (wantsStronger && out.length < 2) {
+		const isEspresso = chosen.brew_method === 'espresso_machine';
+		const strongName = isEspresso ? MOD_LABELS.extraShotName : MOD_LABELS.strongerName;
+		const strongTagline = isEspresso ? MOD_LABELS.extraShotTagline : MOD_LABELS.strongerTagline;
 		out.push({
-			name: `${MOD_LABELS.extraShotName[en ? 'en' : 'ko']} ${baseName}`.slice(0, 40),
-			tagline: MOD_LABELS.extraShotTagline[en ? 'en' : 'ko'],
+			name: `${strongName[en ? 'en' : 'ko']} ${baseName}`.slice(0, 40),
+			tagline: strongTagline[en ? 'en' : 'ko'],
 			override: { dose_mult: 1.3, water_mult: 0.9 }
 		});
 		if (out.length < 2 && canHaveMilk && currentMilk !== 'none') {
@@ -897,8 +946,10 @@ function pickAlternativeEntry(
 		// 이미 보여준 항목은 약하게 감점 — 다른 선택지가 있으면 그쪽으로.
 		if (excludeIds.has(entry.id)) w -= 3;
 		return { entry, w };
-	}).sort((a, b) => b.w - a.w);
-	return scored[0].entry;
+	});
+	// from-scratch mergeSort 사용 (Array.prototype.sort 비의존 약속 유지).
+	const ranked = mergeSort(scored, { key: (s) => s.w, reverse: true });
+	return ranked[0].entry;
 }
 
 function entryToRecipe(
@@ -1091,16 +1142,17 @@ function buildTaglineForRecipe(r: Recipe, name: string, locale: Locale = 'ko'): 
 		const desc = bits.join(' · ');
 		return desc ? `${desc} — a ${name}` : `A ${name}`;
 	}
-	if (r.temperature === 'iced') bits.push('시원하게');
-	else bits.push('따뜻하게');
+	// 온도는 "즐기는" 을 수식하는 부사로 두고(시원하게/따뜻하게), 명사 속성만 따로 묶는다.
+	// (P3) `${desc}로 즐기는` 식으로 부사에 "로" 를 붙이면 "시원하게로" 같은 비문이 된다.
+	const tempWord = r.temperature === 'iced' ? '시원하게' : '따뜻하게';
 	if (r.milk_type && r.milk_type !== 'none') bits.push(`${MILK_TYPE_LABELS[r.milk_type]} 베이스`);
 	if (r.syrups && r.syrups.length > 0) {
 		bits.push(`${SYRUP_LABELS[r.syrups[0]]} 시럽`);
 	} else if (r.aroma && r.aroma !== 'none') {
 		bits.push(`${AROMA_LABELS[r.aroma]} 향`);
 	}
-	const desc = bits.join(' · ');
-	return desc ? `${desc}로 즐기는 ${name}` : `${name} 한 잔`;
+	const nounDesc = bits.join(' · ');
+	return nounDesc ? `${tempWord} 즐기는 ${nounDesc} ${name}` : `${tempWord} 즐기는 ${name}`;
 }
 
 export const POST: RequestHandler = async (event) => {
@@ -1150,8 +1202,11 @@ export const POST: RequestHandler = async (event) => {
 		`기존 제약=${JSON.stringify(oldConstraints)}`;
 
 	const locale: Locale = detectLocale(message);
+	// 1차: 함수 호출 루프(present_patch) → 2차: 단발 JSON → 3차: 규칙 폴백.
 	const patch =
-		(await runLLMPatch(event.platform, message, contextHint, locale)) ?? ruleBasedPatch(message, locale);
+		(await runToolPatch(event.platform, message, contextHint, locale)) ??
+		(await runLLMPatch(event.platform, message, contextHint, locale)) ??
+		ruleBasedPatch(message, locale);
 
 	// 방어: adjust/explore 의도에서 LLM 이 실수로 category_only 를 넣어도 떼어낸다.
 	if (
@@ -1173,8 +1228,26 @@ export const POST: RequestHandler = async (event) => {
 		delete nextConstraints.category_only;
 	}
 
-	// LLM 이 ask 를 놓쳤지만 메시지가 명백히 질문이면 보정.
-	if (patch.intent !== 'ask' && looksLikeQuestion(message)) {
+	// 기구 전환 요청(드립/푸어오버/프렌치프레스 등) → 양성 brew_method 타깃 + explore 강제 (M1·M9).
+	// "드립으로 추천해줘"가 ask(지식 답변)로 새지 않고 그 기구로 새 추천을 만들게 한다.
+	const brewSwitch = detectBrewIntent(message);
+	if (brewSwitch) {
+		nextConstraints.brew_method = brewSwitch;
+		patch.intent = 'explore';
+		// 필터/침출 기구 전환 시 카테고리도 그 기구로 만들 수 있는 블랙으로 좁힌다
+		// (라떼·모카 등 에스프레소 전용은 드립으로 못 만들기 때문).
+		if (brewSwitch !== 'espresso_machine') {
+			nextConstraints.category_only = ['black'];
+		}
+		// LLM 이 만든 문구가 기구와 어긋날 수 있으니(예: "콜드브루 스타일") 깔끔히 덮는다.
+		patch.assistant_text =
+			locale === 'en'
+				? `Here are picks you can brew with ${BREW_METHOD_LABELS[brewSwitch]}.`
+				: `${BREW_METHOD_LABELS[brewSwitch]} 방식으로 내릴 수 있는 커피로 추천해 드릴게요.`;
+	}
+
+	// LLM 이 ask 를 놓쳤지만 메시지가 명백히 질문이면 보정 (단, 기구 전환 추천 요청은 제외 — M9).
+	if (patch.intent !== 'ask' && !brewSwitch && looksLikeQuestion(message)) {
 		const answer = findAnswer(message, locale);
 		if (answer) {
 			patch.intent = 'ask';
@@ -1189,7 +1262,8 @@ export const POST: RequestHandler = async (event) => {
 			locale === 'en'
 				? "I don't have reliable info on that exact thing."
 				: '그 부분은 정확한 정보가 없어요.';
-		const answer = patch.assistant_text || findAnswer(message, locale) || askFallback;
+		// 검증된 정적 답변이 매칭되면 LLM 자유 답변보다 우선 (M7) — 만델링 가공 사실오류 같은 환각 방지.
+		const answer = findAnswer(message, locale) || patch.assistant_text || askFallback;
 		return json({
 			assistant: answer,
 			profile,
@@ -1206,6 +1280,23 @@ export const POST: RequestHandler = async (event) => {
 				locale
 			})
 		});
+	}
+
+	// 우유 없는 메뉴(블랙·아이스아메리카노)에 우유 변경을 요청하면 mod 가 불가능한데도
+	// "오트로 바꿔드릴게요" 라고 거짓 응답하던 문제 (fix.md N1). 이 경우 mod 모드를 건너뛰고
+	// 일반 모드로 흘려 우유가 들어가는 메뉴를 새로 만들되, 정직하게 안내한다.
+	const milkRequested =
+		(patch.constraints.milk_type !== undefined && patch.constraints.milk_type !== 'none') ||
+		/(우유|오트|두유|아몬드)/.test(message) ||
+		/\b(oat|soy|almond|milk)\b/i.test(message);
+	const chosenIsMilkless =
+		chosenRecipe?.menu_category === 'black' || chosenRecipe?.menu_category === 'iced_americano';
+	if (chosenRecipe && patch.intent === 'adjust' && milkRequested && chosenIsMilkless) {
+		patch.intent = 'explore'; // 일반 모드로 — 우유 메뉴를 새로 생성.
+		patch.assistant_text =
+			locale === 'en'
+				? `${chosenName || 'That'} is a black coffee with no milk, so here are milk-based picks instead.`
+				: `${chosenName || '그 메뉴'}는 우유가 없는 블랙 커피라, 우유가 들어가는 메뉴로 보여드릴게요.`;
 	}
 
 	// ── 모디파이 모드 ────────────────────────────────────────
@@ -1271,8 +1362,13 @@ export const POST: RequestHandler = async (event) => {
 		(b) => !nextConstraints.exclude_brew_method?.includes(b)
 	);
 	const brewSet = new Set<BrewMethod>();
-	if (allowedBrews.includes(brewMethod)) brewSet.add(brewMethod);
-	if (allowedBrews.includes('espresso_machine')) brewSet.add('espresso_machine');
+	if (nextConstraints.brew_method && allowedBrews.includes(nextConstraints.brew_method)) {
+		// 명시적 기구 전환(M1): 그 기구만 사용해 후보를 만든다.
+		brewSet.add(nextConstraints.brew_method);
+	} else {
+		if (allowedBrews.includes(brewMethod)) brewSet.add(brewMethod);
+		if (allowedBrews.includes('espresso_machine')) brewSet.add('espresso_machine');
+	}
 	if (brewSet.size === 0) {
 		if (allowedBrews.length > 0) brewSet.add(allowedBrews[0]);
 		else brewSet.add(brewMethod);
@@ -1322,7 +1418,22 @@ export const POST: RequestHandler = async (event) => {
 		});
 	}
 
-	const [bestVariant, ...altVariants] = variants;
+	// P2: 직전 선택이 우유 음료였고(누적 맥락) 기구 전환·명시 카테고리가 없으면 explore 후보도 우유 음료를 앞세운다.
+	// "우유 부드러운 거" → 라떼 선택 후 "그럼 추천해줘" 가 달고나·콜드브루(비-우유)로 새던 문제. milk 후보가 없으면 그대로.
+	const carryMilk =
+		!brewSwitch &&
+		!nextConstraints.category_only?.length &&
+		(!!(chosenRecipe?.milk_type && chosenRecipe.milk_type !== 'none') ||
+			/(우유|라떼|카푸|플랫|크림|오트|두유|아몬드|소이)/.test(message));
+	let orderedVariants = variants;
+	if (carryMilk) {
+		const milkV = variants.filter((r) => r.milk_type && r.milk_type !== 'none');
+		if (milkV.length > 0) {
+			orderedVariants = [...milkV, ...variants.filter((r) => !(r.milk_type && r.milk_type !== 'none'))];
+		}
+	}
+
+	const [bestVariant, ...altVariants] = orderedVariants;
 	const relaxedNote =
 		relaxed.length > 0
 			? locale === 'en'
@@ -1330,13 +1441,38 @@ export const POST: RequestHandler = async (event) => {
 				: ` (조건이 빡빡해서 ${relaxed.join(', ')} 을(를) 살짝 풀어 더 다양하게 보여드려요.)`
 			: '';
 
-	// 응답 proposals — 카테고리 라벨을 기본 display_name 으로.
-	const all = [bestVariant, ...altVariants].slice(0, 3);
+	// 동일 카드 중복 방지 (fix.md #3): 카테고리+우유+온도+시럽+향 시그니처로 distinct.
+	// "라떼만 보여줘" 가 동일한 "카페라떼" 3장으로 나오던 회귀 차단.
+	const seenSig = new Set<string>();
+	const distinct = [bestVariant, ...altVariants].filter((r) => {
+		const sig = [
+			r.menu_category,
+			r.milk_type ?? 'none',
+			r.temperature ?? 'hot',
+			(r.syrups ?? []).join(','),
+			r.aroma ?? 'none'
+		].join('|');
+		if (seenSig.has(sig)) return false;
+		seenSig.add(sig);
+		return true;
+	});
+	const all = (distinct.length > 0 ? distinct : [bestVariant]).slice(0, 3);
+
+	// 응답 proposals — 카테고리 라벨을 기본 display_name 으로. 같은 라벨이 겹치면
+	// 우유/온도 수식을 붙여 화면상 이름도 구분되게 한다.
+	const seenNames = new Set<string>();
 	const proposals: ProposalOut[] = all.map((r, i) => {
 		if (!r.display_name && r.menu_category) {
 			r.display_name = MENU_CATEGORY_LABELS[r.menu_category];
 		}
-		const name = r.display_name ?? (locale === 'en' ? 'Custom brew' : '커스텀 추출');
+		let name = r.display_name ?? (locale === 'en' ? 'Custom brew' : '커스텀 추출');
+		if (seenNames.has(name)) {
+			const milk = r.milk_type && r.milk_type !== 'none' ? MILK_TYPE_LABELS[r.milk_type] : '';
+			const temp = r.temperature === 'iced' ? (locale === 'en' ? 'Iced' : '아이스') : '';
+			const qualifier = [temp, milk].filter(Boolean).join(' ');
+			if (qualifier) name = locale === 'en' ? `${qualifier} ${name}` : `${qualifier} ${name}`;
+		}
+		seenNames.add(name);
 		const tagline = buildTaglineForRecipe(r, name, locale);
 		return {
 			id: `r${Date.now()}-${i + 1}`,
@@ -1346,8 +1482,24 @@ export const POST: RequestHandler = async (event) => {
 		};
 	});
 
+	// P2: assistant 문구가 직전 선택 메뉴(chosenName)를 가리키는데 새 카드엔 그 메뉴가 없으면
+	// "오트밀 라떼를 추천드려요" + (달고나·콜드브루 카드) 처럼 따로 논다 → 카드 기준 문구로 교체.
+	let assistantText = patch.assistant_text;
+	const cardsHaveChosen = !!chosenName && proposals.some((p) => p.name === chosenName);
+	if (chosenName && assistantText.includes(chosenName) && !cardsHaveChosen) {
+		const topName = proposals[0]?.name ?? '';
+		assistantText =
+			locale === 'en'
+				? topName
+					? `Here are some picks, starting with ${topName}.`
+					: 'Here are some picks for you.'
+				: topName
+					? `${topName} 등 새로 추천드릴게요.`
+					: '새로 추천드릴게요.';
+	}
+
 	return json({
-		assistant: patch.assistant_text + relaxedNote,
+		assistant: assistantText + relaxedNote,
 		profile: nextProfile,
 		constraints: effectiveConstraints,
 		brew_method: primaryBrew,

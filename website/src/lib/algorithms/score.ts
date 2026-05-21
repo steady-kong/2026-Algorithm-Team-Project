@@ -26,6 +26,20 @@ export function matchScore(profile: TasteProfile, bean: Bean): number {
 	return total / TASTE_DIMENSIONS.length;
 }
 
+/**
+ * 두 5축 취향 프로파일 간 유사도(0~1). `matchScore` 와 동일하게 각 축 절대 차이를
+ * 최대 4 로 정규화한 평균. LLM 이 생성한 후보의 예상 5축 벡터를 사용자 목표 취향과
+ * 비교해 적합도 순으로 정렬할 때 쓴다 (plan.md §50 — LLM 후보 → 알고리즘 랭킹).
+ */
+export function profileMatchScore(target: TasteProfile, candidate: TasteProfile): number {
+	let total = 0;
+	for (const dim of TASTE_DIMENSIONS) {
+		const diff = Math.abs(target[dim] - candidate[dim]);
+		total += 1 - diff / 4;
+	}
+	return total / TASTE_DIMENSIONS.length;
+}
+
 const CUP_DIMS = ['acidity', 'body', 'sweetness', 'bitterness'] as const;
 export type CupDim = (typeof CUP_DIMS)[number];
 

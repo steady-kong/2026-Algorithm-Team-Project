@@ -59,13 +59,6 @@ const GUATEMALA_MEDIUM: BeanHint = {
 	rationale: '화산토 특유의 향신감 — 두꺼운 폼·꼬르타도 잔에서 향이 도드라짐.'
 };
 
-const SUMATRA_DARK: BeanHint = {
-	origin: '인도네시아 만델링',
-	roast: 'dark',
-	notes: ['흙내음', '삼나무', '다크초콜릿'],
-	rationale: '풀바디·낮은 산미 — 진한 침지식·아이스 추출에서 묵직한 베이스.'
-};
-
 const DALGONA_INSTANT: BeanHint = {
 	origin: '인스턴트 커피 (한국식)',
 	roast: 'dark',

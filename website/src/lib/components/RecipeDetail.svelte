@@ -3,6 +3,7 @@
 	import {
 		deriveIngredients,
 		deriveSteps,
+		formatDuration,
 		recipeTitle,
 		totalTimeText
 	} from '$lib/util/recipe-detail';
@@ -64,7 +65,11 @@
 					<div class="flex-1">
 						<div class="m3-body">{step.description}</div>
 						{#if step.duration_sec !== null}
-							<div class="m3-label opacity-60">{step.duration_sec}초</div>
+							<div class="m3-label opacity-60">
+								{step.duration_sec >= 60
+									? formatDuration(step.duration_sec)
+									: `${step.duration_sec}초`}
+							</div>
 						{/if}
 					</div>
 				</li>

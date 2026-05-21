@@ -34,6 +34,26 @@ export function detectLocale(text: string): Locale {
  * 이 directive 는 호출부에서 **system prompt 의 가장 앞쪽**에 prepend 해서 모델의 attention 을
  * 받기 쉽게 한다.
  */
+/**
+ * 답변을 max 길이로 줄이되 **문장 중간에서 끊지 않는다** (fix.md: ask 답변이 "…모래" 처럼
+ * 어절 중간에서 잘리던 문제). max 안의 마지막 문장 종결부호(. ! ? 。) 뒤까지만 남기고,
+ * 적당한 종결이 없으면 마지막 공백에서 자른 뒤 "…" 를 붙인다.
+ */
+export function clampToSentence(text: string, max: number): string {
+	const t = (text ?? '').trim();
+	if (t.length <= max) return t;
+	const head = t.slice(0, max);
+	// max 안에서 마지막 문장 종결부호(. ! ? 。) 위치. 너무 앞이면(절반 미만) 무시.
+	let lastEnd = -1;
+	for (let i = 0; i < head.length; i++) {
+		if ('.!?。'.includes(head[i])) lastEnd = i;
+	}
+	if (lastEnd >= max * 0.4) return head.slice(0, lastEnd + 1).trim();
+	// 종결부호가 없으면 마지막 공백에서 자르고 말줄임표.
+	const lastSpace = head.lastIndexOf(' ');
+	return (lastSpace >= max * 0.5 ? head.slice(0, lastSpace) : head).trim() + '…';
+}
+
 export function languageDirective(locale: Locale): string {
 	if (locale === 'en') {
 		return (

@@ -20,6 +20,8 @@ export interface PersistedSession {
 	originalCategories: MenuCategory[];
 	/** 이미 카드로 보여준 라이브러리 id — 다음 추천에서 중복 회피용. */
 	shownLibraryIds: string[];
+	/** 마지막 응답의 빠른 응답 칩 — 복원 시 정적 폴백으로 떨어지지 않게 함께 저장. */
+	serverSuggestions: string[];
 	savedAt: number;
 }
 
@@ -44,6 +46,9 @@ export function loadSession(): PersistedSession | null {
 				: [],
 			shownLibraryIds: Array.isArray(parsed.shownLibraryIds)
 				? parsed.shownLibraryIds.filter((x): x is string => typeof x === 'string')
+				: [],
+			serverSuggestions: Array.isArray(parsed.serverSuggestions)
+				? parsed.serverSuggestions.filter((x): x is string => typeof x === 'string')
 				: [],
 			savedAt: parsed.savedAt
 		};
