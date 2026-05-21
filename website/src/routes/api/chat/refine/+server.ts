@@ -36,7 +36,7 @@ import {
 } from '$lib/server/recipe-generator';
 import { cupMatchScore } from '$lib/algorithms/score';
 import { mergeSort } from '$lib/algorithms/sorting';
-import type { BeanHint, Recipe } from '$lib/types/recipe';
+import { ROAST_LEVELS, type BeanHint, type Recipe, type RoastLevel } from '$lib/types/recipe';
 import { GRIND_ORDER, type GrindSize } from '$lib/types/recipe';
 import { BREW_METHODS, BREW_METHOD_LABELS, type BrewMethod } from '$lib/types/brew';
 import { detectBrewIntent } from '$lib/util/intent';
@@ -246,7 +246,9 @@ function sanitizeBeanHint(raw: unknown): BeanHint | undefined {
 	const o = raw as Record<string, unknown>;
 	const origin = typeof o.origin === 'string' ? o.origin.slice(0, 80) : '';
 	const roast =
-		o.roast === 'light' || o.roast === 'medium' || o.roast === 'dark' ? o.roast : 'medium';
+		typeof o.roast === 'string' && (ROAST_LEVELS as readonly string[]).includes(o.roast)
+			? (o.roast as RoastLevel)
+			: 'medium';
 	const notesRaw = Array.isArray(o.notes) ? o.notes : [];
 	const notes = notesRaw
 		.filter((s): s is string => typeof s === 'string')

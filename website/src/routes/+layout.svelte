@@ -17,15 +17,19 @@
 <div class="flex min-h-svh flex-col bg-background text-on-background">
 	<header class="border-b border-outline-variant bg-background/85 backdrop-blur">
 		<div class="mx-auto flex max-w-3xl items-center justify-between gap-4 px-5 py-3">
-			<!--
-			  로고 클릭이 / 로 가는데 어차피 단일 페이지라 무의미했다.
-			  대신 디스플레이로만 두고, 의미 있는 화면 라벨 역할.
-			-->
-			<div class="flex items-center gap-2 text-on-background">
+			<!-- /about 이 생기며 로고 → 홈 링크가 의미를 가진다. -->
+			<a href="/" class="flex items-center gap-2 text-on-background">
 				<span class="text-xl" aria-hidden="true">☕</span>
 				<span class="m3-title">커피 레시피 추천</span>
+			</a>
+			<div class="flex items-center gap-1">
+				<a
+					href="/about"
+					class="m3-label rounded-full px-3 py-1.5 text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
+					>작동 방식</a
+				>
+				<ThemeToggle />
 			</div>
-			<ThemeToggle />
 		</div>
 	</header>
 

@@ -25,7 +25,7 @@ import { detectBrewIntent } from '$lib/util/intent';
 import { profileMatchScore } from '$lib/algorithms/score';
 import { type Constraints } from '$lib/types/constraints';
 import { BREW_METHODS, type BrewMethod } from '$lib/types/brew';
-import { clampLevel, neutralProfile, sanitizeProfile, type TasteProfile } from '$lib/types/taste';
+import { neutralProfile, sanitizeProfile, type TasteProfile } from '$lib/types/taste';
 import {
 	MENU_CATEGORIES,
 	MILK_TYPES,
@@ -37,7 +37,7 @@ import {
 	type SyrupType,
 	type Temperature
 } from '$lib/types/menu';
-import type { Recipe, BeanHint } from '$lib/types/recipe';
+import { ROAST_LEVELS, type Recipe, type BeanHint } from '$lib/types/recipe';
 import {
 	RECIPE_LIBRARY,
 	libraryAsPromptText,
@@ -162,7 +162,7 @@ interface ProposalSpec {
 }
 
 const isRoast = (v: unknown): v is BeanHint['roast'] =>
-	v === 'light' || v === 'medium' || v === 'dark';
+	typeof v === 'string' && (ROAST_LEVELS as readonly string[]).includes(v);
 
 /** LLM 이 생성한 원두 힌트를 화이트리스트 검증 — origin/roast 필수, notes 1~3개, 길이 가드. */
 function sanitizeBeanHint(raw: unknown): BeanHint | undefined {
@@ -336,6 +336,17 @@ function stripCandidateCount(text: string): string {
 		.trim();
 }
 
+function buildUserMessage(
+	messages: { role: 'user' | 'assistant'; text: string }[],
+	context: { profile: TasteProfile | null; constraints: Constraints }
+): string {
+	const transcript = messages.map((m) => `[${m.role}] ${m.text}`).join('\n');
+	const contextHint =
+		`현재 누적 취향: ${context.profile ? JSON.stringify(context.profile) : '미정'} · ` +
+		`제약: ${JSON.stringify(context.constraints)}`;
+	return `${contextHint}\n\n대화:\n${transcript}`;
+}
+
 async function runToolLoop(
 	platform: App.Platform | undefined,
 	messages: { role: 'user' | 'assistant'; text: string }[],
@@ -343,11 +354,7 @@ async function runToolLoop(
 	locale: Locale
 ): Promise<LLMOutput | null> {
 	try {
-		const transcript = messages.map((m) => `[${m.role}] ${m.text}`).join('\n');
-		const contextHint =
-			`현재 누적 취향: ${context.profile ? JSON.stringify(context.profile) : '미정'} · ` +
-			`제약: ${JSON.stringify(context.constraints)}`;
-		const user = `${contextHint}\n\n대화:\n${transcript}`;
+		const user = buildUserMessage(messages, context);
 		const res = await chatWithTools(
 			platform,
 			languageDirective(locale) + TOOL_SYSTEM_PROMPT,
@@ -467,11 +474,7 @@ async function runLLM(
 	locale: Locale
 ): Promise<LLMOutput | null> {
 	try {
-		const transcript = messages.map((m) => `[${m.role}] ${m.text}`).join('\n');
-		const contextHint =
-			`현재 누적 취향: ${context.profile ? JSON.stringify(context.profile) : '미정'} · ` +
-			`제약: ${JSON.stringify(context.constraints)}`;
-		const user = `${contextHint}\n\n대화:\n${transcript}`;
+		const user = buildUserMessage(messages, context);
 		const data = await chatJson(platform, languageDirective(locale) + SYSTEM_PROMPT, user);
 		const intent: 'recommend' | 'ask' = data.intent === 'ask' ? 'ask' : 'recommend';
 		// ask 응답은 문장 경계로 자른 긴 본문(≤600), recommend 는 짧게(200).
@@ -485,15 +488,8 @@ async function runLLM(
 		const propRaw = intent === 'recommend' && Array.isArray(data.proposals) ? data.proposals : [];
 		const proposals = propRaw.map(sanitizeProposal).filter((p): p is ProposalSpec => p !== null);
 		const hint = data.profile_hint as Record<string, unknown> | null | undefined;
-		const profile_hint: TasteProfile | null = hint && typeof hint === 'object'
-			? {
-					acidity: clampLevel(hint.acidity),
-					body: clampLevel(hint.body),
-					sweetness: clampLevel(hint.sweetness),
-					bitterness: clampLevel(hint.bitterness),
-					roast_level: clampLevel(hint.roast_level)
-				}
-			: null;
+		const profile_hint: TasteProfile | null =
+			hint && typeof hint === 'object' ? sanitizeProfile(hint) : null;
 		const fallbackAssistant =
 			locale === 'en'
 				? intent === 'ask'
@@ -701,13 +697,6 @@ function combineEntries(a: RecipeEntry, b: RecipeEntry): ProposalSpec {
 }
 
 /**
- * 폴백 메인 로직.
- *   1) scoreLibrary 로 점수 부여
- *   2) 1순위 entry → 그대로 추천 (#1)
- *   3) 1순위 + 다음 비-중복 entry → 하이브리드 (#2)
- *   4) 카테고리가 또 다른 3순위 entry → 그대로 추천 (#3)
- */
-/**
  * 명시적 의문 표지(물음표·의문사)가 있는지. ask→recommend 역보정에서 "진짜 질문" 만 ask 로 두기
  * 위해 쓴다 — `looksLikeQuestion` 의 "도메인 키워드+짧은 길이" 휴리스틱(메뉴명 오인)을 배제한 엄격판.
  */
@@ -731,6 +720,13 @@ function isTrivialGreeting(text: string): boolean {
 	return false;
 }
 
+/**
+ * 폴백 메인 로직.
+ *   1) scoreLibrary 로 점수 부여
+ *   2) 1순위 entry → 그대로 추천 (#1)
+ *   3) 1순위 + 다음 비-중복 entry → 하이브리드 (#2)
+ *   4) 카테고리가 또 다른 3순위 entry → 그대로 추천 (#3)
+ */
 function ruleBasedPropose(
 	lastUserText: string,
 	context: { profile: TasteProfile | null; constraints: Constraints },
@@ -995,16 +991,8 @@ export const POST: RequestHandler = async (event) => {
 	const constraints = sanitizeConstraints(ctxRaw.constraints);
 	const incomingProfile = ctxRaw.profile;
 	const profile: TasteProfile | null =
-		incomingProfile &&
-		typeof incomingProfile === 'object' &&
-		!Array.isArray(incomingProfile)
-			? {
-					acidity: clampLevel((incomingProfile as Record<string, unknown>).acidity),
-					body: clampLevel((incomingProfile as Record<string, unknown>).body),
-					sweetness: clampLevel((incomingProfile as Record<string, unknown>).sweetness),
-					bitterness: clampLevel((incomingProfile as Record<string, unknown>).bitterness),
-					roast_level: clampLevel((incomingProfile as Record<string, unknown>).roast_level)
-				}
+		incomingProfile && typeof incomingProfile === 'object' && !Array.isArray(incomingProfile)
+			? sanitizeProfile(incomingProfile)
 			: null;
 
 	// 1) LLM 또는 폴백

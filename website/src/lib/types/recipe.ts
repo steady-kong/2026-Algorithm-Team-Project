@@ -48,11 +48,15 @@ export interface RecipeStep {
  * (2) 없으면 메뉴 카테고리 디폴트(`bean-hints.ts`)로 폴백. info.md §1.2 산지 표 + §2.2
  * 로스트가 5축에 미치는 영향을 근거로 매핑.
  */
+/** 로스트 단계 화이트리스트 — info.md §2.1 의 3단 축약. */
+export const ROAST_LEVELS = ['light', 'medium', 'dark'] as const;
+export type RoastLevel = (typeof ROAST_LEVELS)[number];
+
 export interface BeanHint {
 	/** 산지·가공 한 줄 (예: "에티오피아 예가체프 워시드", "브라질 세하도 + 콜롬비아 블렌드"). */
 	origin: string;
 	/** 로스트 단계 — info.md §2.1 의 3단 축약. */
-	roast: 'light' | 'medium' | 'dark';
+	roast: RoastLevel;
 	/** 대표 풍미 노트 1~3개 (예: ["블루베리", "다크초콜릿"]). */
 	notes: readonly string[];
 	/** 한 줄 설명 — 왜 이 메뉴에 이 원두가 어울리는지. */

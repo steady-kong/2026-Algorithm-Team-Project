@@ -17,6 +17,7 @@ import { blendProfiles } from '$lib/algorithms/blend';
 import { sanitizeProfile } from '$lib/types/taste';
 import { MENU_CATEGORIES, MILK_TYPES, AROMAS, SYRUPS } from '$lib/types/menu';
 import { BREW_METHODS } from '$lib/types/brew';
+import { ROAST_LEVELS } from '$lib/types/recipe';
 import { findAnswer } from '$lib/data/coffee-knowledge';
 import type { Locale } from '$lib/util/locale';
 import type { ToolDef } from '$lib/server/upstage';
@@ -96,7 +97,7 @@ const CANDIDATE_SCHEMA = {
 				'달고나처럼 인스턴트가 정체성인 메뉴는 비워도 된다.',
 			properties: {
 				origin: { type: 'string', description: '산지·가공 한 줄 (예: "에티오피아 예가체프 워시드")' },
-				roast: { type: 'string', enum: ['light', 'medium', 'dark'] },
+				roast: { type: 'string', enum: [...ROAST_LEVELS] },
 				notes: { type: 'array', items: { type: 'string' }, description: '대표 풍미 노트 1~3개' },
 				rationale: { type: 'string', description: '왜 이 메뉴에 이 원두가 어울리는지 한 줄' }
 			},

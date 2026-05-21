@@ -1,10 +1,15 @@
 # Morgorithm
 
 > 자연어 한 줄로 취향을 말하면 LLM 이 **함수 호출(tool use)로 후보 메뉴를 실시간 생성**하고, **직접 구현한 알고리즘**(표준 정렬·맵 미사용)이 점수화·정렬·다양성·블렌딩으로 최종 3장을 고르는 SvelteKit 웹앱.
+
+**🔗 배포 / Live demo: <https://morgorithm.dotoroi.xyz/>** · 2026 Algorithm Team Project
+
+> [!WARNING]
+> **보안 주의 — `morgorithm.dotoroi.xyz`**
+> 이 도메인은 [`server3342`](https://github.com/server3342) 가 **임시로** 유지·관리하는 것으로, **사전 통보 없이 사라지거나 악의적인 제3자에게 소유권이 넘어갈 수 있다.** 따라서 **개인정보 등 민감한 정보는 절대 입력하지 말 것.**
 >
-> 배포: <https://morgorithm.dotoroi.xyz/>
-> 
-> 2026 Algorithm Team Project
+> **Security notice — `morgorithm.dotoroi.xyz`**
+> This domain is maintained **temporarily** by [`server3342`](https://github.com/server3342). **It may disappear without notice or be transferred to a malicious third party at any time.** **Do not enter sensitive information such as personal data.**
 
 [`plan.md`](plan.md), [`fix.md`](fix.md), [`info.md`](info.md) — 셋 다 로컬 작업 노트로 repo 에는 포함되지 않는다.
 
@@ -121,6 +126,7 @@ echo 'UPSTAGE_API_KEY="..."' > .dev.vars
 - [ ] 본격 다국어 (현재 ko/en) — 일/중/스페인어 등 실수요 발생 시 paraglide-js 도입
 - [ ] 시연 준비 (강의실 전기 + 실제 추출)
 - [x] 미사용 컴포넌트 정리 (6개 삭제: BeanCard·BrewMethodPicker·ChatPanel·RecipeTable·TasteInput·ui/Button)
+- [x] 작동 방식 페이지 (`/about`) — 파이프라인 인터랙티브 플로우차트(클릭 노드 + 시연 재생)
 
 ---
 
@@ -150,7 +156,8 @@ echo 'UPSTAGE_API_KEY="..."' > .dev.vars
 │   ├── scripts/verify-upstage.mjs    # Upstage 호출 단위 검증
 │   └── src/
 │       ├── routes/
-│       │   ├── +page.svelte          # 채팅 단일 페이지
+│       │   ├── +page.svelte          # 채팅 페이지
+│       │   ├── about/+page.svelte     # 작동 방식 (인터랙티브 플로우차트 + 시연 재생)
 │       │   └── api/chat/{propose,refine} · api/{beans,preference,recipe,beginner}
 │       └── lib/
 │           ├── algorithms/   sorting · greedy · diversify · score · blend
