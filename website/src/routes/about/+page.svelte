@@ -1,5 +1,14 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
+	import { fade, fly, scale } from 'svelte/transition';
+	import { duration, easing, prefersReducedMotion } from '$lib/util/motion';
+
+	// JS transition 은 전역 CSS reduced-motion 규칙에 안 걸리므로 직접 무력화한다.
+	const reduce = prefersReducedMotion();
+	// 상세 패널이 새 노드로 바뀔 때 부드럽게 흘러 들어오는 프리셋.
+	const panelIn = reduce
+		? { duration: 0 }
+		: { y: 8, duration: duration.base, easing: easing.standard };
 
 	type Kind =
 		| 'input'
@@ -501,7 +510,8 @@
 			class="order-1 self-start md:order-2 sticky top-2 z-20 max-h-[42vh] overflow-auto rounded-2xl border border-outline-variant bg-surface-container p-4 md:top-4 md:max-h-none"
 		>
 			{#if detail}
-				<div class="flex flex-col gap-2">
+				{#key activeId}
+					<div class="flex flex-col gap-2" in:fly={panelIn}>
 					<div class="flex items-center justify-between gap-2">
 						<div class="flex items-center gap-2">
 							<span class="text-lg" aria-hidden="true">{detail.icon}</span>
@@ -532,9 +542,10 @@
 							>{detail.file}</code
 						>
 					{/if}
-				</div>
+					</div>
+				{/key}
 			{:else}
-				<div class="flex flex-col gap-3">
+				<div class="flex flex-col gap-3" in:fade={reduce ? { duration: 0 } : { duration: duration.fast }}>
 					<h2 class="m3-title">범례</h2>
 					<p class="m3-body text-on-surface-variant">노드를 누르면 여기에 설명이 나옵니다.</p>
 					<ul class="flex flex-col gap-1.5">
@@ -566,16 +577,30 @@
 					use:register={id}
 					onclick={() => selectNode(id)}
 					aria-pressed={active}
-					class="flex h-full w-full items-start gap-2.5 rounded-xl text-left transition-all {compact
+					class="flex h-full w-full items-start gap-2.5 rounded-xl text-left transition-all duration-200 ease-out active:scale-[0.98] {compact
 						? 'px-3 py-2.5'
 						: 'px-3.5 py-3'} {KIND_STYLE[n.kind]} {active
-						? '-translate-y-0.5 shadow-[var(--m3-shadow-lg)] ring-2 ring-primary'
+						? '-translate-y-0.5 scale-[1.02] shadow-[var(--m3-shadow-lg)] ring-2 ring-primary'
 						: 'hover:-translate-y-0.5 hover:shadow-[var(--m3-shadow)]'}"
 				>
 					<span
-						class="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-surface-container-highest text-[0.95rem]"
-						aria-hidden="true">{n.icon}</span
+						class="relative grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-surface-container-highest text-[0.95rem] transition-transform duration-200 {active
+							? 'scale-110'
+							: ''}"
+						aria-hidden="true"
 					>
+						{n.icon}
+						<!-- 활성 노드 표식: 재생 중이면 천천히 맥동하는 점으로 현재 단계를 알린다. -->
+						{#if active}
+							<!-- motion-safe: 가 prefers-reduced-motion 을 이미 가드하므로 !reduce 중복 검사는 불필요. -->
+							<span
+								class="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-primary ring-2 ring-surface-container {playing
+									? 'motion-safe:animate-pulse'
+									: ''}"
+								transition:scale={reduce ? { duration: 0 } : { duration: duration.fast, start: 0 }}
+							></span>
+						{/if}
+					</span>
 					<span class="min-w-0 flex-1">
 						<span
 							class="m3-label block font-semibold leading-snug [overflow-wrap:anywhere] {code
@@ -596,7 +621,9 @@
 				>
 			{/snippet}
 
-			<div class="mx-auto flex w-full max-w-xl flex-col">
+			<!-- 모드 전환 시 다이어그램 전체를 keyed fade 로 교체해 propose↔refine 이 부드럽게 넘어간다. -->
+			{#key mode}
+			<div class="mx-auto flex w-full max-w-xl flex-col" in:fade={reduce ? { duration: 0 } : { duration: duration.base }}>
 				{#each blocks as block, bi (bi)}
 					{#if bi > 0}{@render connector()}{/if}
 
@@ -643,6 +670,7 @@
 					{/if}
 				{/each}
 			</div>
+			{/key}
 		</div>
 	</div>
 </div>
