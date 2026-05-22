@@ -1,28 +1,23 @@
 <!doctype html>
-<html lang="ko" data-theme="auto">
+<html lang="ko">
 	<head>
 		<meta charset="utf-8" />
+		<link rel="icon" href="%sveltekit.assets%/favicon.svg" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta name="color-scheme" content="light dark" />
-		<meta name="description" content="LLM 기반 맞춤형 커피 레시피 추천 시스템" />
-		<meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
-		<meta name="googlebot" content="noindex, nofollow" />
-		<title>커피 레시피 추천</title>
+		<meta
+			name="description"
+			content="Upstage AI로 후보를 만들고, 직접 구현한 알고리즘으로 당신의 취향에 맞는 커피를 점진적으로 찾아주는 추천 서비스"
+		/>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link
 			rel="stylesheet"
-			href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+			href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
 		/>
-		<script>
-			// FOUC 방지: 저장된 테마를 HTML에 즉시 반영.
-			(function () {
-				try {
-					var stored = localStorage.getItem('theme');
-					if (stored === 'light' || stored === 'dark') {
-						document.documentElement.dataset.theme = stored;
-					}
-				} catch (_) {}
-			})();
-		</script>
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"
+		/>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

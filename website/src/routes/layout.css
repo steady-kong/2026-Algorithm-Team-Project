@@ -2,228 +2,97 @@
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 
-/* ----------------------------------------------------------------
-   Material Design 3 색상 토큰 — 커피 테마 (warm brown palette).
-   라이트/다크는 [data-theme="dark"] + (prefers-color-scheme: dark) 모두로 전환한다.
----------------------------------------------------------------- */
-
-:root,
-[data-theme='light'] {
-	--m3-primary: #6f4a2c;
-	--m3-on-primary: #ffffff;
-	--m3-primary-container: #ffdcc1;
-	--m3-on-primary-container: #2a1700;
-
-	--m3-secondary: #765846;
-	--m3-on-secondary: #ffffff;
-	--m3-secondary-container: #ffdcc8;
-	--m3-on-secondary-container: #2b1709;
-
-	--m3-tertiary: #5e6435;
-	--m3-on-tertiary: #ffffff;
-	--m3-tertiary-container: #e3ebad;
-	--m3-on-tertiary-container: #1c2000;
-
-	--m3-error: #ba1a1a;
-	--m3-on-error: #ffffff;
-	--m3-error-container: #ffdad6;
-	--m3-on-error-container: #410002;
-
-	--m3-background: #fff8f4;
-	--m3-on-background: #211a14;
-	--m3-surface: #fff8f4;
-	--m3-on-surface: #211a14;
-	--m3-surface-variant: #f2dfd0;
-	--m3-on-surface-variant: #51453a;
-	--m3-surface-container: #faece0;
-	--m3-surface-container-high: #f4e6d9;
-	--m3-surface-container-highest: #eee0d3;
-
-	--m3-outline: #847468;
-	--m3-outline-variant: #d5c3b5;
-
-	--m3-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.08);
-	--m3-shadow-lg: 0 6px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-[data-theme='dark'] {
-	--m3-primary: #ffb787;
-	--m3-on-primary: #482900;
-	--m3-primary-container: #663d1d;
-	--m3-on-primary-container: #ffdcc1;
-
-	--m3-secondary: #e5bfa3;
-	--m3-on-secondary: #432b1c;
-	--m3-secondary-container: #5c4131;
-	--m3-on-secondary-container: #ffdcc8;
-
-	--m3-tertiary: #c7cf94;
-	--m3-on-tertiary: #30360b;
-	--m3-tertiary-container: #464c1f;
-	--m3-on-tertiary-container: #e3ebad;
-
-	--m3-error: #ffb4ab;
-	--m3-on-error: #690005;
-	--m3-error-container: #93000a;
-	--m3-on-error-container: #ffdad6;
-
-	--m3-background: #19120c;
-	--m3-on-background: #eee0d3;
-	--m3-surface: #19120c;
-	--m3-on-surface: #eee0d3;
-	--m3-surface-variant: #51453a;
-	--m3-on-surface-variant: #d5c3b5;
-	--m3-surface-container: #261d16;
-	--m3-surface-container-high: #312720;
-	--m3-surface-container-highest: #3d322a;
-
-	--m3-outline: #9e8d80;
-	--m3-outline-variant: #51453a;
-
-	--m3-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.55);
-	--m3-shadow-lg: 0 6px 12px rgba(0, 0, 0, 0.55), 0 2px 4px rgba(0, 0, 0, 0.45);
-}
-
-@media (prefers-color-scheme: dark) {
-	[data-theme='auto'] {
-		--m3-primary: #ffb787;
-		--m3-on-primary: #482900;
-		--m3-primary-container: #663d1d;
-		--m3-on-primary-container: #ffdcc1;
-
-		--m3-secondary: #e5bfa3;
-		--m3-on-secondary: #432b1c;
-		--m3-secondary-container: #5c4131;
-		--m3-on-secondary-container: #ffdcc8;
-
-		--m3-tertiary: #c7cf94;
-		--m3-on-tertiary: #30360b;
-		--m3-tertiary-container: #464c1f;
-		--m3-on-tertiary-container: #e3ebad;
-
-		--m3-error: #ffb4ab;
-		--m3-on-error: #690005;
-		--m3-error-container: #93000a;
-		--m3-on-error-container: #ffdad6;
-
-		--m3-background: #19120c;
-		--m3-on-background: #eee0d3;
-		--m3-surface: #19120c;
-		--m3-on-surface: #eee0d3;
-		--m3-surface-variant: #51453a;
-		--m3-on-surface-variant: #d5c3b5;
-		--m3-surface-container: #261d16;
-		--m3-surface-container-high: #312720;
-		--m3-surface-container-highest: #3d322a;
-
-		--m3-outline: #9e8d80;
-		--m3-outline-variant: #51453a;
-
-		--m3-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.55);
-		--m3-shadow-lg: 0 6px 12px rgba(0, 0, 0, 0.55), 0 2px 4px rgba(0, 0, 0, 0.45);
-	}
-}
-
-/* Tailwind v4 테마 토큰 — M3 변수를 Tailwind 색 유틸리티에 매핑. */
+/*
+ * Material Design 3 inspired token set, coffee palette.
+ * Mapped into Tailwind v4 via @theme so utilities like `bg-surface`,
+ * `text-primary`, `rounded-md3` are available across the app.
+ */
 @theme {
 	--font-sans:
-		'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui,
-		'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-	--font-mono:
-		ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+		'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 
-	--color-primary: var(--m3-primary);
-	--color-on-primary: var(--m3-on-primary);
-	--color-primary-container: var(--m3-primary-container);
-	--color-on-primary-container: var(--m3-on-primary-container);
+	/* coffee-toned MD3 roles */
+	--color-primary: #6f4e37; /* espresso brown */
+	--color-on-primary: #ffffff;
+	--color-primary-container: #f3e2d3;
+	--color-on-primary-container: #2c1810;
 
-	--color-secondary: var(--m3-secondary);
-	--color-on-secondary: var(--m3-on-secondary);
-	--color-secondary-container: var(--m3-secondary-container);
-	--color-on-secondary-container: var(--m3-on-secondary-container);
+	--color-secondary: #b08968; /* latte */
+	--color-tertiary: #c8553d; /* roast red */
 
-	--color-tertiary: var(--m3-tertiary);
-	--color-on-tertiary: var(--m3-on-tertiary);
-	--color-tertiary-container: var(--m3-tertiary-container);
-	--color-on-tertiary-container: var(--m3-on-tertiary-container);
+	--color-surface: #fbf7f3;
+	--color-surface-container: #f4ece4;
+	--color-surface-container-high: #ede0d4;
+	--color-on-surface: #211a15;
+	--color-on-surface-variant: #6d5d52;
+	--color-outline: #d8c7b8;
 
-	--color-m3-error: var(--m3-error);
-	--color-on-error: var(--m3-on-error);
-	--color-error-container: var(--m3-error-container);
-	--color-on-error-container: var(--m3-on-error-container);
+	--color-success: #4f7a52;
+	--color-warning: #b3791f;
 
-	--color-background: var(--m3-background);
-	--color-on-background: var(--m3-on-background);
-	--color-surface: var(--m3-surface);
-	--color-on-surface: var(--m3-on-surface);
-	--color-surface-variant: var(--m3-surface-variant);
-	--color-on-surface-variant: var(--m3-on-surface-variant);
-	--color-surface-container: var(--m3-surface-container);
-	--color-surface-container-high: var(--m3-surface-container-high);
-	--color-surface-container-highest: var(--m3-surface-container-highest);
+	--radius-md3: 1.25rem;
+	--radius-md3-lg: 1.75rem;
 
-	--color-outline: var(--m3-outline);
-	--color-outline-variant: var(--m3-outline-variant);
-
-	--radius-xs: 4px;
-	--radius-sm: 8px;
-	--radius-md: 12px;
-	--radius-lg: 16px;
-	--radius-xl: 28px;
-	--radius-full: 9999px;
+	--shadow-md3:
+		0 1px 2px rgba(60, 40, 25, 0.08), 0 4px 16px rgba(60, 40, 25, 0.06);
+	--shadow-md3-lg: 0 8px 32px rgba(60, 40, 25, 0.12);
 }
 
-/* ----------------------------------------------------------------
-   전역 기본 스타일
----------------------------------------------------------------- */
+:root {
+	color-scheme: light;
+}
+
 html {
-	color-scheme: light dark;
-	background: var(--m3-background);
+	scroll-behavior: smooth;
 }
 
 body {
+	background:
+		radial-gradient(1200px 600px at 80% -10%, #f3e2d3 0%, transparent 60%),
+		radial-gradient(900px 500px at -10% 10%, #f4ece4 0%, transparent 55%),
+		var(--color-surface);
+	color: var(--color-on-surface);
 	font-family: var(--font-sans);
-	color: var(--m3-on-background);
-	background: var(--m3-background);
 	-webkit-font-smoothing: antialiased;
-	-moz-osx-font-smoothing: grayscale;
-	font-feature-settings: 'ss06', 'ss05';
-	letter-spacing: -0.01em;
+	min-height: 100dvh;
 }
 
-/* M3 typescale (간략) */
-.m3-display {
-	font-size: clamp(2.25rem, 4vw, 3.25rem);
-	line-height: 1.15;
-	font-weight: 700;
-	letter-spacing: -0.02em;
+/* Material Symbols helper */
+.msym {
+	font-family: 'Material Symbols Rounded';
+	font-weight: normal;
+	font-style: normal;
+	line-height: 1;
+	letter-spacing: normal;
+	text-transform: none;
+	display: inline-block;
+	white-space: nowrap;
+	word-wrap: normal;
+	direction: ltr;
+	-webkit-font-feature-settings: 'liga';
+	font-feature-settings: 'liga';
+	-webkit-font-smoothing: antialiased;
+	font-variation-settings:
+		'FILL' 0,
+		'wght' 400,
+		'GRAD' 0,
+		'opsz' 24;
+	user-select: none;
 }
-.m3-headline {
-	font-size: 1.5rem;
-	line-height: 1.3;
-	font-weight: 600;
-	letter-spacing: -0.01em;
-}
-.m3-title {
-	font-size: 1.125rem;
-	line-height: 1.4;
-	font-weight: 600;
-}
-.m3-body {
-	font-size: 0.9375rem;
-	line-height: 1.55;
-	font-weight: 400;
-}
-.m3-label {
-	font-size: 0.8125rem;
-	line-height: 1.3;
-	font-weight: 500;
-	letter-spacing: 0.02em;
+.msym.fill {
+	font-variation-settings:
+		'FILL' 1,
+		'wght' 500,
+		'GRAD' 0,
+		'opsz' 24;
 }
 
-/* 포커스 링 — M3 스타일 */
-:focus-visible {
-	outline: 2px solid var(--m3-primary);
-	outline-offset: 2px;
-	border-radius: 4px;
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.001ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.001ms !important;
+	}
 }

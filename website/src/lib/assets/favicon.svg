@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-	<title>Morgorithm</title>
-	<rect width="64" height="64" rx="14" fill="#3E2723"/>
-	<path d="M24 18 c -2 -3 2 -5 0 -10" stroke="#D7C4B8" stroke-width="2.4" fill="none" stroke-linecap="round" opacity="0.85"/>
-	<path d="M34 18 c -2 -3 2 -5 0 -10" stroke="#D7C4B8" stroke-width="2.4" fill="none" stroke-linecap="round" opacity="0.85"/>
-	<path d="M14 24 L14 46 a4 4 0 0 0 4 4 h20 a4 4 0 0 0 4 -4 V24 Z" fill="#FAF6F1"/>
-	<path d="M42 28 a8 8 0 0 1 0 14" stroke="#FAF6F1" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-	<rect x="18" y="26" width="22" height="5" rx="1" fill="#6B4423"/>
-</svg>

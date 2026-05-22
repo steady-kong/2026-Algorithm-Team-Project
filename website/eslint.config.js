@@ -11,6 +11,7 @@ const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
 
 export default defineConfig(
 	includeIgnoreFile(gitignorePath),
+	{ ignores: ['worker-configuration.d.ts', '.svelte-kit/', 'drizzle/'] },
 	js.configs.recommended,
 	ts.configs.recommended,
 	svelte.configs.recommended,
@@ -34,11 +35,8 @@ export default defineConfig(
 		}
 	},
 	{
-		// 외부(http/https) 구매 링크를 다루는 컴포넌트. resolve() 는 내부 라우팅용이라
-		// 외부 URL 에는 해당하지 않아 이 파일에서만 규칙을 끈다.
-		files: ['src/lib/components/BeanCard.svelte'],
-		rules: {
-			'svelte/no-navigation-without-resolve': 'off'
-		}
+		// Override or add rule settings here, such as:
+		// 'svelte/button-has-type': 'error'
+		rules: {}
 	}
 );

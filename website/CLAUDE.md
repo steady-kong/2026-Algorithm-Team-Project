@@ -2,7 +2,7 @@
 
 - **Language**: TypeScript
 - **Package Manager**: npm
-- **Add-ons**: eslint, tailwindcss, mcp
+- **Add-ons**: eslint, tailwindcss, mcp, better-auth, drizzle, vitest
 
 ---
 

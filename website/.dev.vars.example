@@ -1,0 +1,7 @@
+# Local dev secrets for the Cloudflare adapter (vite dev reads this via platform.env).
+# Copy to `.dev.vars` and fill in. In production set these with `wrangler secret put`.
+#
+# Optional — without a key the app uses the deterministic rule fallback (source: "rules").
+UPSTAGE_API_KEY=""
+# Optional model override (default: solar-pro3)
+UPSTAGE_MODEL=""

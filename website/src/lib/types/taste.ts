@@ -1,57 +1,60 @@
-export const TASTE_DIMENSIONS = [
-	'acidity',
-	'body',
-	'sweetness',
-	'bitterness',
-	'roast_level'
-] as const;
+/**
+ * Taste model — four sensory axes, each a discrete 1–5 score.
+ * These are the dimensions the user steers: 신맛 / 단맛 / 쓴맛 / 바디감.
+ */
 
-export type TasteDimension = (typeof TASTE_DIMENSIONS)[number];
+export const TASTE_AXES = ['acidity', 'sweetness', 'bitterness', 'body'] as const;
+export type TasteAxis = (typeof TASTE_AXES)[number];
 
-export const TASTE_DIMENSION_LABELS: Record<TasteDimension, string> = {
-	acidity: '산미',
-	body: '바디감',
+export type TasteProfile = Record<TasteAxis, number>;
+
+/** Korean labels for UI. */
+export const AXIS_LABEL: Record<TasteAxis, string> = {
+	acidity: '신맛',
 	sweetness: '단맛',
 	bitterness: '쓴맛',
-	roast_level: '로스팅'
+	body: '바디감'
 };
 
-export type TasteLevel = 1 | 2 | 3 | 4 | 5;
+export const AXIS_MIN = 1;
+export const AXIS_MAX = 5;
 
-export type TasteProfile = Record<TasteDimension, TasteLevel>;
+/** Clamp a single axis value into the valid 1–5 integer range. */
+export function clampAxis(value: number): number {
+	const r = Math.round(value);
+	if (r < AXIS_MIN) return AXIS_MIN;
+	if (r > AXIS_MAX) return AXIS_MAX;
+	return r;
+}
 
-export const clampLevel = (n: unknown): TasteLevel => {
-	const v = typeof n === 'number' ? n : Number(n);
-	if (!Number.isFinite(v)) return 3;
-	const rounded = Math.round(v);
-	if (rounded <= 1) return 1;
-	if (rounded >= 5) return 5;
-	return rounded as TasteLevel;
-};
+/** Clamp every axis of a profile. */
+export function clampProfile(p: TasteProfile): TasteProfile {
+	return {
+		acidity: clampAxis(p.acidity),
+		sweetness: clampAxis(p.sweetness),
+		bitterness: clampAxis(p.bitterness),
+		body: clampAxis(p.body)
+	};
+}
 
-export const neutralProfile = (): TasteProfile => ({
-	acidity: 3,
-	body: 3,
-	sweetness: 3,
-	bitterness: 3,
-	roast_level: 3
-});
+/** A neutral middle-of-the-road profile, used as the starting target. */
+export function neutralProfile(): TasteProfile {
+	return { acidity: 3, sweetness: 3, bitterness: 3, body: 3 };
+}
 
-export const isTasteProfile = (v: unknown): v is TasteProfile => {
-	if (!v || typeof v !== 'object') return false;
-	const o = v as Record<string, unknown>;
-	return TASTE_DIMENSIONS.every((d) => {
-		const n = o[d];
-		return typeof n === 'number' && n >= 1 && n <= 5 && Number.isInteger(n);
+/** Apply a signed delta to a profile (used when refining a preference). */
+export function applyDelta(base: TasteProfile, delta: Partial<TasteProfile>): TasteProfile {
+	return clampProfile({
+		acidity: base.acidity + (delta.acidity ?? 0),
+		sweetness: base.sweetness + (delta.sweetness ?? 0),
+		bitterness: base.bitterness + (delta.bitterness ?? 0),
+		body: base.body + (delta.body ?? 0)
 	});
-};
+}
 
-export const sanitizeProfile = (v: unknown): TasteProfile => {
-	const base = neutralProfile();
-	if (!v || typeof v !== 'object') return base;
+/** Type guard for untrusted (e.g. LLM-produced) profile data. */
+export function isTasteProfile(v: unknown): v is TasteProfile {
+	if (typeof v !== 'object' || v === null) return false;
 	const o = v as Record<string, unknown>;
-	for (const d of TASTE_DIMENSIONS) {
-		base[d] = clampLevel(o[d]);
-	}
-	return base;
-};
+	return TASTE_AXES.every((a) => typeof o[a] === 'number');
+}

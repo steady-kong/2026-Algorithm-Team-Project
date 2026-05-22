@@ -1,50 +1,56 @@
+import type { ScoredRecipe } from '$lib/types/recipe';
+
 /**
- * 원두 그리디 추천.
+ * Greedy selection.
  *
- * 전략:
- *   1) 모든 원두에 적합도를 계산한다.
- *   2) min_match_score 이상이고 (예산이 있다면) 예산 이하인 원두만 후보로 둔다.
- *   3) 100g 환산 가격 오름차순으로 직접 구현한 mergeSort 로 정렬한다.
- *   4) 앞에서부터 top_k 개를 그리디하게 선택한다.
+ * Used in: turning a ranked candidate list into the final 3 cards shown to the
+ * user. A naive "top-3 by score" tends to return three near-identical drinks
+ * (e.g. three lattes). `diversify` greedily walks the ranked list and skips a
+ * candidate whose brew method already appears in the chosen set until it has to
+ * relax — maximising variety while staying as high-scoring as possible.
  *
- * 적합도 임계치 제약 하에서 가격 기준 전역 최적을 보장한다.
+ * This is the classic greedy "local best that doesn't violate a constraint"
+ * heuristic: at each step take the highest remaining score whose method is new.
+ *
+ * Complexity: O(n) over the already-sorted list (two passes).
  */
+export function diversify(ranked: readonly ScoredRecipe[], k: number): ScoredRecipe[] {
+	const chosen: ScoredRecipe[] = [];
+	const usedMethods = new Set<string>();
 
-import { mergeSort } from './sorting';
-import { matchScore, pricePer100g } from './score';
-import type { Bean, BeanRecommendation } from '../types/bean';
-import type { TasteProfile } from '../types/taste';
-
-export interface GreedyOptions {
-	topK?: number;
-	minMatchScore?: number;
-	budgetKrw?: number | null;
+	// Pass 1: greedily take the best of each not-yet-seen method.
+	for (const sr of ranked) {
+		if (chosen.length >= k) break;
+		if (!usedMethods.has(sr.recipe.method)) {
+			chosen.push(sr);
+			usedMethods.add(sr.recipe.method);
+		}
+	}
+	// Pass 2: if methods ran out before we hit k, backfill with next-best leftovers.
+	if (chosen.length < k) {
+		const picked = new Set(chosen.map((c) => c.recipe.id));
+		for (const sr of ranked) {
+			if (chosen.length >= k) break;
+			if (!picked.has(sr.recipe.id)) chosen.push(sr);
+		}
+	}
+	return chosen;
 }
 
-export function greedyRecommend(
-	profile: TasteProfile,
-	beans: readonly Bean[],
-	opts: GreedyOptions = {}
-): BeanRecommendation[] {
-	const topK = opts.topK ?? 5;
-	const minMatchScore = opts.minMatchScore ?? 0.6;
-	const budgetKrw = opts.budgetKrw ?? null;
-
-	const candidates: BeanRecommendation[] = [];
-	for (const bean of beans) {
-		const score = matchScore(profile, bean);
-		if (score < minMatchScore) continue;
-		const unitPrice = pricePer100g(bean);
-		if (budgetKrw !== null && unitPrice > budgetKrw) continue;
-		candidates.push({
-			bean,
-			match_score: Math.round(score * 10000) / 10000,
-			price_per_100g_krw: unitPrice
-		});
+/**
+ * Greedy threshold filter: keep only candidates at/above a fit threshold,
+ * then take the cheapest `k` of them. Used by the bean/value picker.
+ * Assumes input is already cost-ascending so the slice is the cheapest.
+ */
+export function affordableTopK(
+	costAscending: readonly ScoredRecipe[],
+	minScore: number,
+	k: number
+): ScoredRecipe[] {
+	const out: ScoredRecipe[] = [];
+	for (const sr of costAscending) {
+		if (out.length >= k) break;
+		if (sr.score >= minScore) out.push(sr);
 	}
-
-	const sorted = mergeSort(candidates, {
-		key: (r) => r.price_per_100g_krw
-	});
-	return sorted.slice(0, topK);
+	return out;
 }

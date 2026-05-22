@@ -1,15 +1,8 @@
 {
 	"mcpServers": {
 		"svelte": {
-			"type": "stdio",
-			"command": "npx",
-			"env": {
-				
-			},
-			"args": [
-				"-y",
-				"@sveltejs/mcp"
-			]
+			"type": "http",
+			"url": "https://mcp.svelte.dev/mcp"
 		}
 	}
 }

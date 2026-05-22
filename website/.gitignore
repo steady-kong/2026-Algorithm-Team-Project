@@ -7,6 +7,7 @@ node_modules
 .wrangler
 /.svelte-kit
 /build
+/dist
 
 # OS
 .DS_Store
@@ -15,12 +16,10 @@ Thumbs.db
 # Env
 .env
 .env.*
-!.env.example
 !.env.test
+.dev.vars
+!.dev.vars.example
 
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
-
-.dev.vars*
-!.dev.vars.example
