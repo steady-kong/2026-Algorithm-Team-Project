@@ -47,6 +47,11 @@
 	let shownLibraryIds = $state<string[]>([]);
 	let restoredNotice = $state(false);
 
+	// 타자기 연출은 "이번 세션에서 새로 도착한" 어시스턴트 메시지에만 적용한다.
+	// 초기 인사·복원된 대화는 즉시 보여준다(typewriter 미적용).
+	// onMount/복원 직후의 메시지 개수를 기준선으로 잡고, 그 이후 인덱스만 타자기 대상.
+	let typedBaseline = $state(1);
+
 	let scrollContainer: HTMLDivElement | null = $state(null);
 	async function scrollToBottom() {
 		await tick();
@@ -66,6 +71,8 @@
 			// 복원 시 마지막 칩도 함께 살려, 하단 추천 질문이 정적 폴백으로 떨어지지 않게 한다.
 			serverSuggestions = restored.serverSuggestions;
 			restoredNotice = true;
+			// 복원된 메시지는 모두 즉시 표시 — 기준선을 현재 길이로 끌어올린다.
+			typedBaseline = messages.length;
 			void scrollToBottom();
 		}
 
@@ -413,7 +420,11 @@
 		<div class="mx-auto flex max-w-2xl flex-col gap-3 pb-6">
 			{#each messages as msg, idx (idx)}
 				{#if msg.kind === 'text'}
-					<ChatBubble role={msg.role}>{msg.text}</ChatBubble>
+					{#if msg.role === 'assistant' && idx >= typedBaseline}
+						<ChatBubble role="assistant" typewriterText={msg.text} />
+					{:else}
+						<ChatBubble role={msg.role}>{msg.text}</ChatBubble>
+					{/if}
 				{:else if msg.kind === 'error'}
 					<ChatBubble role="assistant" emphasis="error">{msg.text}</ChatBubble>
 				{:else if msg.kind === 'proposals'}
