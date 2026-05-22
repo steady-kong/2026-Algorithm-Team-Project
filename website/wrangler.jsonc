@@ -39,6 +39,25 @@
 			"namespace_id": "1002",
 			"simple": { "limit": 30, "period": 60 }
 		}
+	],
+	/**
+	 * 추천 엔진 영속화 — KV 캐시(COFFEE_CACHE) + D1(COFFEE_DB).
+	 * 실제 id 는 아래 명령으로 발급받아 REPLACE_AFTER_... 자리에 채운다:
+	 *   wrangler kv namespace create COFFEE_CACHE   → kv_namespaces[].id
+	 *   wrangler d1 create coffee-db                → d1_databases[].database_id
+	 * 바인딩은 engine/bindings.ts 가 방어적으로 읽으므로(없으면 null → graceful degrade)
+	 * id 가 아직 placeholder 여도 배포·실행은 정상 동작한다.
+	 */
+	"kv_namespaces": [
+		{ "binding": "COFFEE_CACHE", "id": "REPLACE_AFTER_wrangler_kv_namespace_create" }
+	],
+	"d1_databases": [
+		{
+			"binding": "COFFEE_DB",
+			"database_name": "coffee-db",
+			"database_id": "REPLACE_AFTER_wrangler_d1_create",
+			"migrations_dir": "migrations"
+		}
 	]
 	/**
 	 * Smart Placement
