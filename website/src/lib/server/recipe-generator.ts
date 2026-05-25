@@ -414,6 +414,15 @@ const CATEGORY_BREW_OVERRIDES: Partial<Record<MenuCategory, {
 	}
 };
 
+/**
+ * 카테고리 강제 brew 오버라이드를 반영한 *실제* 추출 기구.
+ * 예: cold_brew 는 spec.brew_method 가 무엇이든 attachCategory 에서 french_press 로 굳어진다.
+ * 사용자의 기구 의도와 후보를 비교할 때 겉보기(spec) 가 아니라 이 값으로 따져야 한다.
+ */
+export function effectiveBrewMethod(category: MenuCategory, brewMethod: BrewMethod): BrewMethod {
+	return CATEGORY_BREW_OVERRIDES[category]?.brew_method ?? brewMethod;
+}
+
 /** 카테고리별 추출 외 추가 단계 (우유 스팀, 잔 결합 등). steps 끝에 이어붙는다. */
 function buildCategorySteps(
 	base: Recipe,

@@ -18,7 +18,7 @@ import { checkRateLimit, rateLimitResponse } from '$lib/server/ratelimit';
 import { readJson } from '$lib/server/validate';
 import { chatJson, chatWithTools, LLMResponseError, NotConfiguredError } from '$lib/server/upstage';
 import { buildProposeTools } from '$lib/server/tools';
-import { attachCategory, ruleBasedGenerate } from '$lib/server/recipe-generator';
+import { attachCategory, effectiveBrewMethod, ruleBasedGenerate } from '$lib/server/recipe-generator';
 import { mergeSort } from '$lib/algorithms/sorting';
 import { diversify } from '$lib/algorithms/diversify';
 import { detectBrewIntent } from '$lib/util/intent';
@@ -70,6 +70,12 @@ const SYSTEM_PROMPT =
 	'대화 톤(ask): assistant 에 2~3 문장으로 풍부하게 답하되 **아래 지식 다이제스트에 없는 ' +
 	'구체적 사실(연도·이름·수치)은 절대 만들지 마라.** 모르면 "그 부분은 정확한 정보가 없어요" ' +
 	'라고 답하고 가능하면 비슷한 주제로 안내. ready_to_propose=false, proposals=[] 로 둔다.\n' +
+	'\n' +
+	'## 내부 식별자 노출 금지\n' +
+	'답변·메뉴 이름·tagline 어디에도 **내부 식별자를 절대 노출하지 마라** — 카테고리 영문 코드' +
+	'(cold_brew·iced_americano·flat_white 등), 라이브러리 id(r-…), 영문 분류 태그' +
+	'(classic·refreshing·bitter·minimal 등)는 사용자에게 보이면 안 된다. 반드시 자연스러운 ' +
+	'메뉴 이름과 풀어 쓴 설명으로만 답하라.\n' +
 	'\n' +
 	'아래는 우리가 가진 **레시피 라이브러리**다. 각 항목은 [id] 이름: category/milk/aroma+syrups/temp | tags 형식.\n' +
 	'각 제안은 다음 둘 중 하나여야 한다:\n' +
@@ -282,6 +288,8 @@ const TOOL_SYSTEM_PROMPT =
 	'조회 결과(found=false) 밖의 구체적 사실(연도·이름·수치)은 **절대 만들지 마라.** 모르면 "정확한 정보가 없어요" 라고 답하라.\n' +
 	'질문과 추천이 섞이면 추천을 우선한다.\n' +
 	'- assistant 텍스트는 **최종 3잔 기준**으로 자연스럽게(후보 개수·내부 처리·"N개" 같은 표현 금지).\n' +
+	'- **내부 식별자 노출 금지**: 카테고리 영문 코드(cold_brew·iced_americano 등), 라이브러리 id(r-…), ' +
+	'영문 분류 태그(classic·refreshing·bitter 등)를 답변·이름에 절대 쓰지 마라. 자연스러운 메뉴 이름으로만 말하라.\n' +
 	'\n' +
 	'## 하이브리드\n' +
 	'두 스타일을 섞은 후보의 예상 취향이 헷갈리면 `blend_candidates` 로 두 5축을 비율 보간해 받아 predicted 에 쓸 수 있다.\n' +
@@ -416,7 +424,10 @@ async function runToolLoop(
 			const scored: ScoredCandidate[] = candidates.map((c) => {
 				let fit = profileMatchScore(target, c.predicted);
 				if (wantsMilk && (!c.spec.milk_type || c.spec.milk_type === 'none')) fit -= 0.4;
-				if (wantedBrew && c.spec.brew_method !== wantedBrew) fit -= 0.4;
+				// cold_brew 처럼 카테고리가 추출 기구를 강제하는 경우까지 반영해(effective) 비교 —
+				// 머신 요청에 콜드브루(=french_press) 가 끼는 것을 막는다.
+				if (wantedBrew && effectiveBrewMethod(c.spec.category, c.spec.brew_method) !== wantedBrew)
+					fit -= 0.4;
 				return { ...c, fit };
 			});
 			const sorted = mergeSort(scored, { key: (s) => s.fit, reverse: true });

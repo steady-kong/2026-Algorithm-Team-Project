@@ -447,16 +447,33 @@ export const ANSWERS: readonly KnowledgeAnswer[] = [
  * LLM 폴백의 *마지막 안전망* — Upstage 키 없음 · 타임아웃 등 모든 LLM 실패에서
  * 키워드 매칭에 성공하면 결정적 답변을 돌려준다.
  */
+/** 두 항목의 "차이/비교" 를 묻는 표지. 이게 있으면 단일 답이 아니라 두 답을 합쳐 설명한다. */
+const COMPARISON_RE = /(차이|차이점|비교|다른\s*점|뭐가\s*달라|어떻게\s*달라|\bvs\.?\b|versus|difference|compare)/i;
+
+/** 텍스트에 키워드가 매칭되는 ANSWERS 항목들을 중복 없이 등장 순서대로 모은다. */
+function matchingAnswers(text: string): KnowledgeAnswer[] {
+	const out: KnowledgeAnswer[] = [];
+	for (const a of ANSWERS) {
+		if (a.keywords.some((re) => re.test(text))) out.push(a);
+	}
+	return out;
+}
+
 export function findAnswer(text: string, locale: Locale = 'ko'): string | null {
 	if (!text || typeof text !== 'string') return null;
 	const t = text.trim();
 	if (t.length === 0) return null;
-	for (const a of ANSWERS) {
-		for (const re of a.keywords) {
-			if (re.test(t)) {
-				return locale === 'en' && a.answer_en ? a.answer_en : a.answer;
-			}
+	const pick = (a: KnowledgeAnswer) => (locale === 'en' && a.answer_en ? a.answer_en : a.answer);
+	// 비교 질문("콜드브루랑 아이스아메리카노 차이?") — 서로 다른 두 항목이 잡히면 두 grounded 답을
+	// 합쳐 돌려준다. 하나만 잡히거나 비교 표지가 없으면 아래의 단일 첫 매칭으로 폴백.
+	if (COMPARISON_RE.test(t)) {
+		const matches = matchingAnswers(t);
+		if (matches.length >= 2) {
+			return `${pick(matches[0])} ${pick(matches[1])}`;
 		}
+	}
+	for (const a of ANSWERS) {
+		if (a.keywords.some((re) => re.test(t))) return pick(a);
 	}
 	return null;
 }

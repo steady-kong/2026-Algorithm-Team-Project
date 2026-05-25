@@ -2,7 +2,17 @@
 	import type { Proposal } from '$lib/types/proposal';
 	import { CATEGORY_VISUALS, MENU_CATEGORY_LABELS, type MenuCategory } from '$lib/types/menu';
 	import { ROAST_LABELS } from '$lib/data/bean-hints';
+	import { TASTE_DIMENSION_LABELS } from '$lib/types/taste';
 	import RecipeDetail from './RecipeDetail.svelte';
+
+	// 카드 3장을 한눈에 비교할 수 있도록 노출하는 컵 특성 4축. predicted_cup 은 추출 기구·
+	// 카테고리·시럽에서 결정적으로 계산돼 후보마다 다르다 (roast_level 은 컵 축이 아니라 제외).
+	const CUP_DIMS = [
+		['acidity', TASTE_DIMENSION_LABELS.acidity],
+		['body', TASTE_DIMENSION_LABELS.body],
+		['sweetness', TASTE_DIMENSION_LABELS.sweetness],
+		['bitterness', TASTE_DIMENSION_LABELS.bitterness]
+	] as const;
 
 	interface Props {
 		proposals: Proposal[];
@@ -112,6 +122,15 @@
 								</span>
 							</span>
 						{/if}
+					</div>
+					<div
+						class="m3-label mt-1.5 flex flex-wrap gap-x-2.5 gap-y-0.5 text-on-surface-variant"
+						class:text-on-primary-container={isChosen}
+						aria-label="예상 맛 특성"
+					>
+						{#each CUP_DIMS as [dim, label] (dim)}
+							<span>{label} {p.recipe.predicted_cup[dim]}/5</span>
+						{/each}
 					</div>
 				</div>
 				{#if !isChosen}
