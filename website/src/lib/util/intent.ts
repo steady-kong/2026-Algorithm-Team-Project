@@ -20,6 +20,13 @@ export function detectBrewIntent(message: string): BrewMethod | null {
 	if (/(프렌치\s*프레스|french[\s-]*press)/i.test(m)) return 'french_press';
 	if (/(에어로\s*프레스|aeropress|aero[\s-]*press)/i.test(m)) return 'aeropress';
 	if (/(모카\s*포트|moka[\s-]*pot)/i.test(m)) return 'moka_pot';
-	if (/(에스프레소\s*머신|espresso\s*machine)/i.test(m)) return 'espresso_machine';
+	// "에스프레소 머신" 외에 "커피 머신/머신/기계", "coffee machine/machine" 도 머신 추출 의도로 본다
+	// — 이 문구들이 빠져 있어 "커피 머신으로 내려줘" 가 감지 안 돼 콜드브루가 끼던 문제.
+	if (
+		/(에스프레소\s*머신|espresso\s*machine|커피\s*(?:머신|기계)|coffee\s*machine|머신|기계|\bmachine\b)/i.test(
+			m
+		)
+	)
+		return 'espresso_machine';
 	return null;
 }

@@ -442,7 +442,7 @@
 
 	<div class="sticky bottom-0 mt-2 border-t border-outline-variant bg-background/95 py-3 backdrop-blur">
 		<div class="mx-auto max-w-2xl">
-			<Composer {busy} onSend={send} {quickReplies} placeholder="예) 달콤하고 부드러운 따뜻한 커피" />
+			<Composer {busy} onSend={send} {quickReplies} placeholder="예) 핸드드립으로 산미 있는 아이스커피" />
 			<div class="mt-2 flex justify-end">
 				<button
 					type="button"
