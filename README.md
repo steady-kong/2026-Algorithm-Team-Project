@@ -34,12 +34,14 @@
 사용자 한 줄 (예: "달콤하고 부드러운 따뜻한 거")
    ▼
 POST /api/chat/propose  (함수 호출 루프)
+   게이트: 커피·음료 요청인가? (도메인 키워드 1차 → 신호 없으면 LLM temp 0 분류)
+          무관(off-topic)하면 정중히 거절하고 레시피를 만들지 않는다
    LLM: 종결 도구 present_recommendations 로 후보 5~6개 실시간 생성
         (각 후보 = enum 특징 + 예상 5축 + 원두 산지/로스트)
-   서버: 화이트리스트 검증 → score(5축 유사도) → mergeSort → diversify
-        → 상위 3장 → 카테고리 결합 → Recipe 완성
+   서버: 화이트리스트 검증 → score(5축 유사도) → mergeSort → diversify → 상위 3장
+        → 콜드브루 게이트(명시 요청 아니면 제외) → 카테고리 결합 → Recipe 완성
    ▼
-3장 카드 (카테고리 비주얼 + 🌱 추천 원두 산지·로스트)
+3장 카드 (카테고리 비주얼 + 🌱 추천 원두 산지·로스트 + 예상 맛 4축: 산미·바디감·단맛·쓴맛)
 클릭 시 인라인 레시피 펼침
    ▼ 후속 한 줄
 POST /api/chat/refine  (함수 호출 루프 — present_patch)
@@ -115,18 +117,6 @@ echo 'UPSTAGE_API_KEY="..."' > .dev.vars
 ```
 
 배포는 Cloudflare Workers (`npm run deploy`). 상세 명령은 아래 *개발자 가이드* 참고.
-
----
-
-## 로드맵
-
-- [ ] 다나와 크롤러 → 실 원두 데이터 (현재 mock 18종)
-- [ ] `info.md` 임베딩 RAG-lite (Q&A·원두 추천 그라운딩 강화 — Upstage `embedding-*`, 빌드타임 사전계산)
-- [ ] blend 서버측 하이브리드 합성 (두 후보 enum 병합까지)
-- [ ] 본격 다국어 (현재 ko/en) — 일/중/스페인어 등 실수요 발생 시 paraglide-js 도입
-- [ ] 시연 준비 (강의실 전기 + 실제 추출)
-- [x] 미사용 컴포넌트 정리 (6개 삭제: BeanCard·BrewMethodPicker·ChatPanel·RecipeTable·TasteInput·ui/Button)
-- [x] 작동 방식 페이지 (`/about`) — 파이프라인 인터랙티브 플로우차트(클릭 노드 + 시연 재생)
 
 ---
 

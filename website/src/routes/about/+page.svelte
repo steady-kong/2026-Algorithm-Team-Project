@@ -56,6 +56,22 @@
 			icon: '💬',
 			what: 'LLM 없이 "어떤 걸 원하세요?" 로 한 번 더 구체화를 유도한다.'
 		},
+		p_offtopic: {
+			label: '커피·음료 요청인가?',
+			sub: 'isCoffeeRelevant → LLM(temp 0)',
+			kind: 'decision',
+			icon: '◆',
+			file: 'routes/api/chat/propose · util/intent.ts',
+			what: '도메인 키워드가 있으면 LLM 없이 바로 통과. 키워드가 없을 때만 LLM 이진 분류(temperature 0)로 off-topic 여부를 판정한다.',
+			why: '커피·음료와 무관한 요청에 아무 레시피나 만들지 않는다. 키워드 1차로 정상 요청은 빠르게 통과시키고, 분류기는 temperature 0 으로 같은 입력에 항상 같은 판정을 내려 일관되게 거른다.'
+		},
+		p_decline: {
+			label: '정중한 거절',
+			sub: '추천 상태 무변경',
+			kind: 'output',
+			icon: '🚫',
+			what: '"커피·음료 메뉴 추천만 도와드릴 수 있어요" 안내만 응답하고 레시피는 만들지 않는다.'
+		},
 		p_key: {
 			label: 'UPSTAGE API 호출에 성공했는가?',
 			kind: 'decision',
@@ -280,6 +296,14 @@
 		},
 		{
 			kind: 'branch',
+			id: 'p_offtopic',
+			outcomes: [
+				{ label: '무관 (off-topic)', tone: 'alt', target: 'p_decline' },
+				{ label: '커피·음료', tone: 'happy' }
+			]
+		},
+		{
+			kind: 'branch',
 			id: 'p_key',
 			outcomes: [
 				{ label: '호출 성공', tone: 'happy' },
@@ -329,6 +353,7 @@
 			'p_input',
 			'p_guard',
 			'p_trivial',
+			'p_offtopic',
 			'p_key',
 			'p_toolloop',
 			't_present_rec',

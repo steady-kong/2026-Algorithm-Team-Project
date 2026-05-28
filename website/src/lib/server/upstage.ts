@@ -39,7 +39,7 @@ export async function chatJson(
 	platform: App.Platform | undefined,
 	systemPrompt: string,
 	userPrompt: string,
-	opts: { timeoutMs?: number } = {}
+	opts: { timeoutMs?: number; temperature?: number } = {}
 ): Promise<Record<string, unknown>> {
 	const env = readEnv(platform);
 	if (!env.UPSTAGE_API_KEY) {
@@ -47,6 +47,7 @@ export async function chatJson(
 	}
 	const model = env.UPSTAGE_MODEL ?? DEFAULT_MODEL;
 	const timeoutMs = opts.timeoutMs ?? 12_000;
+	const temperature = opts.temperature ?? 0.3;
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -65,7 +66,7 @@ export async function chatJson(
 					{ role: 'user', content: userPrompt }
 				],
 				response_format: { type: 'json_object' },
-				temperature: 0.3
+				temperature
 			}),
 			signal: controller.signal
 		});
