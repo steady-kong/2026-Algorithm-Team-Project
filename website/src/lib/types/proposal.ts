@@ -17,6 +17,8 @@ export interface Proposal {
 	 * 'alt' = 같은 의도에 맞는 다른 메뉴. 카드 배지로 노출.
 	 */
 	kind?: 'mod' | 'alt';
+	/** 추천 근거 한 줄 — 사용자가 말한 맛 축에 대한 알고리즘 적합도(예: "단맛이 취향에 잘 맞아요 · 적합도 90%"). 없으면 표시 안 함. */
+	why?: string;
 }
 
 export type ChatRole = 'user' | 'assistant';

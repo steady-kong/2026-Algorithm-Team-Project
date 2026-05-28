@@ -76,6 +76,16 @@
 					<div class="m3-label mt-0.5 text-on-surface-variant" class:text-on-primary-container={isChosen}>
 						{p.tagline}
 					</div>
+					{#if p.why}
+						<div
+							class="m3-label mt-1 flex items-center gap-1 text-primary"
+							class:text-on-primary-container={isChosen}
+							title="추천 알고리즘 적합도 — 사용자가 말한 맛 축 기준"
+						>
+							<span aria-hidden="true">🎯</span>
+							<span>{p.why}</span>
+						</div>
+					{/if}
 					<div class="mt-1.5 flex flex-wrap items-center gap-1">
 						{#if cat}
 							<span

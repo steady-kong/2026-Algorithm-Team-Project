@@ -23,6 +23,7 @@ import { mergeSort } from '$lib/algorithms/sorting';
 import { diversify } from '$lib/algorithms/diversify';
 import { detectBrewIntent, mentionsColdBrew, isCoffeeRelevant } from '$lib/util/intent';
 import { profileMatchScore } from '$lib/algorithms/score';
+import { explainCupMatch } from '$lib/util/match-explain';
 import { type Constraints } from '$lib/types/constraints';
 import { BREW_METHODS, type BrewMethod } from '$lib/types/brew';
 import { neutralProfile, sanitizeProfile, type TasteProfile } from '$lib/types/taste';
@@ -1208,6 +1209,7 @@ export const POST: RequestHandler = async (event) => {
 		tagline: string;
 		recipe: Recipe;
 		inspired_by?: { id: string; name: string }[];
+		why?: string;
 	}
 	// 폴백(ruleBasedPropose)이 비요청 맥락에 cold_brew 를 채워 넣어도 후보에서 제거. allowColdBrew 는 위에서 계산.
 	const proposals: ProposalOut[] = result.proposals
@@ -1226,7 +1228,8 @@ export const POST: RequestHandler = async (event) => {
 				id: `p${i + 1}`,
 				name: spec.name,
 				tagline: spec.tagline,
-				recipe
+				recipe,
+				why: explainCupMatch(recipe.predicted_cup, nextProfile, lastUserText, locale)
 			};
 			if (inspired_by.length > 0) out.inspired_by = inspired_by;
 			return out;
