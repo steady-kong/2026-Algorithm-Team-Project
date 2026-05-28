@@ -32,12 +32,27 @@
 		{
 			"name": "RATE_LIMIT_LLM",
 			"namespace_id": "1001",
-			"simple": { "limit": 10, "period": 60 }
+			"simple": {
+				"limit": 10,
+				"period": 10
+			}
 		},
 		{
 			"name": "RATE_LIMIT_PLAIN",
 			"namespace_id": "1002",
-			"simple": { "limit": 30, "period": 60 }
+			"simple": {
+				"limit": 10,
+				"period": 10
+			}
+		}
+	],
+	"routes": [
+		{
+			"pattern": "morgorithm.dotoroi.xyz",
+			"zone_name": "dotoroi.xyz",
+			"custom_domain": true,
+			"enabled": true,
+			"previews_enabled": false
 		}
 	]
 	/**
