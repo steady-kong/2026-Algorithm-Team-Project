@@ -908,6 +908,7 @@ function pickAlternativeEntry(
 	chosen: Recipe,
 	patch: Patch,
 	constraints: Constraints,
+	allowColdBrew: boolean,
 	excludeIds: Set<string> = new Set()
 ): RecipeEntry | null {
 	const wantsSweeter =
@@ -923,6 +924,7 @@ function pickAlternativeEntry(
 
 	const candidates = RECIPE_LIBRARY.filter((e) => {
 		const f = e.features;
+		if (f.category === 'cold_brew' && !allowColdBrew) return false;
 		if (chosen.menu_category && f.category === chosen.menu_category) return false;
 		if (excludeMilk && f.milk_type !== 'none') return false;
 		if (wantsIced && f.temperature !== 'iced') return false;
@@ -981,7 +983,8 @@ function generateVariantsWithFallback(
 	profile: TasteProfile,
 	brewMethods: BrewMethod[],
 	initialConstraints: Constraints,
-	initialPool: MenuCategory[]
+	initialPool: MenuCategory[],
+	allowColdBrew: boolean
 ): { variants: Recipe[]; effectiveConstraints: Constraints; relaxed: string[] } {
 	const baseRecipes = brewMethods.flatMap((b) => ruleBasedGenerate(profile, b, 3));
 	const tryOnce = (cs: Constraints, pool: MenuCategory[]) =>
@@ -991,10 +994,14 @@ function generateVariantsWithFallback(
 			topK: 8
 		});
 
+	// 콜드브루는 명시 요청 시에만 — 폴백 단계에서 FULL_POOL 로 재확장돼도 새지 않도록 풀에서 거른다.
+	const gate = (p: MenuCategory[]): MenuCategory[] =>
+		allowColdBrew ? p : p.filter((c) => c !== 'cold_brew');
+
 	let cs: Constraints = { ...initialConstraints };
-	let pool = initialPool;
+	let pool = gate(initialPool);
 	const relaxed: string[] = [];
-	const FULL_POOL: MenuCategory[] = [...MENU_CATEGORIES];
+	const FULL_POOL: MenuCategory[] = gate([...MENU_CATEGORIES]);
 
 	let v = tryOnce(cs, pool);
 	if (v.length > 0) return { variants: v, effectiveConstraints: cs, relaxed };
@@ -1230,6 +1237,13 @@ export const POST: RequestHandler = async (event) => {
 		delete nextConstraints.category_only;
 	}
 
+	// 콜드브루는 침지식 — 드립/에스프레소 변주에 섞이지 않도록 명시 요청 시에만 후보에 포함.
+	// 신호: 메시지에 콜드브루 언급 · category_only 고정 · 이미 콜드브루를 고른 상태의 후속 조정.
+	const allowColdBrew =
+		/콜드\s*브루|cold\s*brew/i.test(message) ||
+		(nextConstraints.category_only?.includes('cold_brew') ?? false) ||
+		chosenRecipe?.menu_category === 'cold_brew';
+
 	// 기구 전환 요청(드립/푸어오버/프렌치프레스 등) → 양성 brew_method 타깃 + explore 강제 (M1·M9).
 	// "드립으로 추천해줘"가 ask(지식 답변)로 새지 않고 그 기구로 새 추천을 만들게 한다.
 	const brewSwitch = detectBrewIntent(message);
@@ -1315,7 +1329,7 @@ export const POST: RequestHandler = async (event) => {
 		}));
 
 		// 같은 의도에 맞는 다른 카테고리 메뉴 한 가지.
-		const altEntry = pickAlternativeEntry(chosenRecipe, patch, nextConstraints, excludeIds);
+		const altEntry = pickAlternativeEntry(chosenRecipe, patch, nextConstraints, allowColdBrew, excludeIds);
 		if (altEntry) {
 			const altRecipe = entryToRecipe(altEntry, nextProfile, nextConstraints);
 			if (altRecipe) {
@@ -1385,7 +1399,8 @@ export const POST: RequestHandler = async (event) => {
 		nextProfile,
 		brewMethods,
 		nextConstraints,
-		pool
+		pool,
+		allowColdBrew
 	);
 
 	const primaryBrew = brewMethods[0];
