@@ -39,7 +39,7 @@ import { mergeSort } from '$lib/algorithms/sorting';
 import { ROAST_LEVELS, type BeanHint, type Recipe, type RoastLevel } from '$lib/types/recipe';
 import { GRIND_ORDER, type GrindSize } from '$lib/types/recipe';
 import { BREW_METHODS, BREW_METHOD_LABELS, type BrewMethod } from '$lib/types/brew';
-import { detectBrewIntent } from '$lib/util/intent';
+import { detectBrewIntent, mentionsColdBrew } from '$lib/util/intent';
 import { TASTE_DIMENSIONS, clampLevel, type TasteProfile } from '$lib/types/taste';
 import {
 	MENU_CATEGORIES,
@@ -1238,9 +1238,9 @@ export const POST: RequestHandler = async (event) => {
 	}
 
 	// 콜드브루는 침지식 — 드립/에스프레소 변주에 섞이지 않도록 명시 요청 시에만 후보에 포함.
-	// 신호: 메시지에 콜드브루 언급 · category_only 고정 · 이미 콜드브루를 고른 상태의 후속 조정.
+	// 신호: 메시지에 콜드브루 언급(부정 표현 제외) · category_only 고정 · 이미 콜드브루를 고른 상태의 후속 조정.
 	const allowColdBrew =
-		/콜드\s*브루|cold\s*brew/i.test(message) ||
+		mentionsColdBrew(message) ||
 		(nextConstraints.category_only?.includes('cold_brew') ?? false) ||
 		chosenRecipe?.menu_category === 'cold_brew';
 

@@ -21,7 +21,7 @@ import { buildProposeTools } from '$lib/server/tools';
 import { attachCategory, effectiveBrewMethod, ruleBasedGenerate } from '$lib/server/recipe-generator';
 import { mergeSort } from '$lib/algorithms/sorting';
 import { diversify } from '$lib/algorithms/diversify';
-import { detectBrewIntent } from '$lib/util/intent';
+import { detectBrewIntent, mentionsColdBrew } from '$lib/util/intent';
 import { profileMatchScore } from '$lib/algorithms/score';
 import { type Constraints } from '$lib/types/constraints';
 import { BREW_METHODS, type BrewMethod } from '$lib/types/brew';
@@ -1135,6 +1135,14 @@ export const POST: RequestHandler = async (event) => {
 		});
 	}
 
+	// 콜드브루는 침지식 — 명시 요청 시에만. 비요청 cold_brew 를 폴백 결정 전에 먼저 걸러,
+	// 그 결과 후보가 비면 아래 폴백이 신선한 비-콜드브루 후보로 채운다(빈 추천=오류 회귀 방지).
+	const allowColdBrew =
+		mentionsColdBrew(lastUserText) || (constraints.category_only?.includes('cold_brew') ?? false);
+	if (!allowColdBrew) {
+		result = { ...result, proposals: result.proposals.filter((s) => s.category !== 'cold_brew') };
+	}
+
 	// LLM 결과의 inspired_by 가 이미 보여준 id 위주라면 폴백으로 신선한 후보를 한 번 더 시도.
 	const llmInspired = new Set(
 		result.proposals.flatMap((p) => p.inspired_by_ids ?? [])
@@ -1196,10 +1204,7 @@ export const POST: RequestHandler = async (event) => {
 		recipe: Recipe;
 		inspired_by?: { id: string; name: string }[];
 	}
-	// 콜드브루는 침지식 — 명시 요청 시에만. LLM/폴백이 비요청 맥락에서 끼워넣어도 후보에서 제거.
-	const allowColdBrew =
-		detectExplicitCategory(lastUserText) === 'cold_brew' ||
-		(constraints.category_only?.includes('cold_brew') ?? false);
+	// 폴백(ruleBasedPropose)이 비요청 맥락에 cold_brew 를 채워 넣어도 후보에서 제거. allowColdBrew 는 위에서 계산.
 	const proposals: ProposalOut[] = result.proposals
 		.filter((spec) => allowColdBrew || spec.category !== 'cold_brew')
 		.slice(0, 3)

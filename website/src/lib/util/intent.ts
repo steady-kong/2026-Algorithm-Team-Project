@@ -8,6 +8,15 @@ import { type BrewMethod } from '$lib/types/brew';
  *
  * "드립 말고" 같은 배제 맥락이면 양성 의도가 아니므로 null.
  */
+/**
+ * 메시지가 콜드브루를 명시 요청하는가. "콜드브루 말고" 같은 배제 맥락이면 false —
+ * 콜드브루는 침지식이라 비요청 맥락에서 드립/에스프레소 변주에 섞이면 안 된다(propose·refine 공용 게이트).
+ */
+export function mentionsColdBrew(message: string): boolean {
+	if (/(말고|말구|빼고|빼|제외|싫|아니)/.test(message)) return false;
+	return /콜드\s*브루|cold\s*brew/i.test(message);
+}
+
 export function detectBrewIntent(message: string): BrewMethod | null {
 	const m = message;
 	if (/(말고|말구|빼고|빼|제외|싫|아니)/.test(m)) return null;
