@@ -552,9 +552,13 @@
 		<!-- 플로우차트 -->
 		<div class="order-2 min-w-0 md:order-1">
 			{#snippet connector(label?: string)}
-				<div class="flex items-center justify-center gap-2 py-1.5">
-					<span class="text-outline" aria-hidden="true">▾</span>
-					{#if label}<span class="m3-label text-on-surface-variant">{label}</span>{/if}
+				<div class="flex flex-col items-center py-1">
+					<div class="h-2.5 w-px bg-outline-variant" aria-hidden="true"></div>
+					{#if label}
+						<span class="m3-label my-0.5 rounded-md bg-surface-container px-1.5 py-0.5 text-on-surface-variant">{label}</span>
+						<div class="h-2.5 w-px bg-outline-variant" aria-hidden="true"></div>
+					{/if}
+					<div class="h-0 w-0 border-x-4 border-t-[7px] border-x-transparent border-t-outline-variant" aria-hidden="true"></div>
 				</div>
 			{/snippet}
 
@@ -596,6 +600,19 @@
 				>
 			{/snippet}
 
+			{#snippet targetCol(o: Outcome)}
+				<div class="flex flex-col items-center">
+					<div class="h-2 w-px bg-outline-variant" aria-hidden="true"></div>
+					{@render tonePill(o.label, o.tone)}
+					<div class="mt-1 h-2 w-px bg-outline-variant" aria-hidden="true"></div>
+					<div class="h-0 w-0 border-x-4 border-t-[7px] border-x-transparent border-t-outline-variant" aria-hidden="true"></div>
+					<div class="mt-1.5 w-full">
+						{#if o.target}{@render nodeCard(o.target, true)}{/if}
+						{#if o.note}<p class="m3-label mt-1 text-center text-on-surface-variant">{o.note}</p>{/if}
+					</div>
+				</div>
+			{/snippet}
+
 			<div class="mx-auto flex w-full max-w-xl flex-col">
 				{#each blocks as block, bi (bi)}
 					{#if bi > 0}{@render connector()}{/if}
@@ -603,21 +620,24 @@
 					{#if block.kind === 'node'}
 						<div class="w-full">{@render nodeCard(block.id)}</div>
 					{:else if block.kind === 'branch'}
-						{@const sides = block.outcomes.filter((o) => o.target)}
 						{@const cont = block.outcomes.find((o) => !o.target)}
+						{@const targets = block.outcomes.filter((o) => o.target)}
+						{@const leftT = targets.length > 1 ? targets[0] : undefined}
+						{@const rightT = targets.length > 1 ? targets[1] : targets[0]}
 						<div class="w-full">{@render nodeCard(block.id)}</div>
-						{@render connector()}
-						{@const left = sides[0]}
-						{@const right = sides[1]}
-						<!-- 3열×3행(라벨/화살표/카드) 그리드 — 행이 칸마다 일직선 정렬되고 좌우 카드 높이가 같다. 가운데=계속 경로(라벨만). -->
-						<div class="grid grid-cols-3 gap-x-3" style="grid-template-rows: auto auto 1fr;">
-							<div class="col-start-1 row-start-1 flex items-center justify-center">{#if left}{@render tonePill(left.label, left.tone)}{/if}</div>
-							<div class="col-start-2 row-start-1 flex items-center justify-center">{#if cont}{@render tonePill(cont.label, cont.tone)}{/if}</div>
-							<div class="col-start-3 row-start-1 flex items-center justify-center">{#if right}{@render tonePill(right.label, right.tone)}{/if}</div>
-							<div class="col-start-1 row-start-2 flex justify-center py-1">{#if left}<span class="text-outline" aria-hidden="true">▾</span>{/if}</div>
-							<div class="col-start-3 row-start-2 flex justify-center py-1">{#if right}<span class="text-outline" aria-hidden="true">▾</span>{/if}</div>
-							<div class="col-start-1 row-start-3 flex flex-col gap-1.5">{#if left?.target}<div class="flex-1">{@render nodeCard(left.target, true)}</div>{/if}{#if left?.note}<span class="m3-label text-center text-on-surface-variant">{left.note}</span>{/if}</div>
-							<div class="col-start-3 row-start-3 flex flex-col gap-1.5">{#if right?.target}<div class="flex-1">{@render nodeCard(right.target, true)}</div>{/if}{#if right?.note}<span class="m3-label text-center text-on-surface-variant">{right.note}</span>{/if}</div>
+						<!-- 중앙 스템 → 수평 분기선. 계속(타깃 없음)은 중앙 레일로 직진해 다음 블록으로 이어지고, 타깃 분기는 옆으로 빠져 종료한다. -->
+						<div class="flex justify-center" aria-hidden="true"><div class="h-3 w-px bg-outline-variant"></div></div>
+						<div aria-hidden="true" class="border-t border-outline-variant" style="margin-left:{leftT ? '16.667' : '50'}%;width:{leftT ? '66.666' : '33.333'}%;height:0"></div>
+						<div class="grid grid-cols-3 items-stretch gap-x-2">
+							{#if leftT}{@render targetCol(leftT)}{:else}<div></div>{/if}
+							<div class="flex flex-col items-center">
+								{#if cont}
+									<div class="h-2 w-px bg-outline-variant" aria-hidden="true"></div>
+									{@render tonePill(cont.label, cont.tone)}
+									<div class="mt-1 w-px flex-1 bg-outline-variant" style="min-height:1.5rem" aria-hidden="true"></div>
+								{/if}
+							</div>
+							{#if rightT}{@render targetCol(rightT)}{:else}<div></div>{/if}
 						</div>
 					{:else if block.kind === 'chain'}
 						<div class="rounded-2xl border border-dashed border-outline-variant bg-surface-container/40 p-4">
