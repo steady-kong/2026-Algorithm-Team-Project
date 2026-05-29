@@ -35,6 +35,7 @@ import {
 	type Constraints
 } from '$lib/server/recipe-generator';
 import { cupMatchScore } from '$lib/algorithms/score';
+import { explainCupMatch } from '$lib/util/match-explain';
 import { mergeSort } from '$lib/algorithms/sorting';
 import { ROAST_LEVELS, type BeanHint, type Recipe, type RoastLevel } from '$lib/types/recipe';
 import { GRIND_ORDER, type GrindSize } from '$lib/types/recipe';
@@ -1127,6 +1128,7 @@ interface ProposalOut {
 	recipe: Recipe;
 	inspired_by?: { id: string; name: string }[];
 	kind?: 'mod' | 'alt';
+	why?: string;
 }
 
 const MILK_TYPE_EN: Record<MilkType, string> = {
@@ -1320,13 +1322,17 @@ export const POST: RequestHandler = async (event) => {
 	// 그 메뉴 위에 변형 1~2장 + 대안 1장으로 응답.
 	if (chosenRecipe && patch.intent === 'adjust') {
 		const mods = buildModSpecs(chosenRecipe, chosenName, message, patch, locale);
-		const proposals: ProposalOut[] = mods.map((m, i) => ({
-			id: `mod-${Date.now()}-${i + 1}`,
-			name: m.name,
-			tagline: m.tagline,
-			recipe: applyMod(chosenRecipe, nextProfile, m),
-			kind: 'mod' as const
-		}));
+		const proposals: ProposalOut[] = mods.map((m, i) => {
+			const recipe = applyMod(chosenRecipe, nextProfile, m);
+			return {
+				id: `mod-${Date.now()}-${i + 1}`,
+				name: m.name,
+				tagline: m.tagline,
+				recipe,
+				kind: 'mod' as const,
+				why: explainCupMatch(recipe.predicted_cup, nextProfile, message, locale)
+			};
+		});
 
 		// 같은 의도에 맞는 다른 카테고리 메뉴 한 가지.
 		const altEntry = pickAlternativeEntry(chosenRecipe, patch, nextConstraints, allowColdBrew, excludeIds);
@@ -1344,7 +1350,8 @@ export const POST: RequestHandler = async (event) => {
 					tagline: altTagline.slice(0, 100),
 					recipe: altRecipe,
 					inspired_by: [{ id: altEntry.id, name: altEntry.name }],
-					kind: 'alt' as const
+					kind: 'alt' as const,
+					why: explainCupMatch(altRecipe.predicted_cup, nextProfile, message, locale)
 				});
 			}
 		}
@@ -1495,7 +1502,8 @@ export const POST: RequestHandler = async (event) => {
 			id: `r${Date.now()}-${i + 1}`,
 			name,
 			tagline,
-			recipe: r
+			recipe: r,
+			why: explainCupMatch(r.predicted_cup, nextProfile, message, locale)
 		};
 	});
 
