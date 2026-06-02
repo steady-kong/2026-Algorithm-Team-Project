@@ -11,7 +11,9 @@
 > **Security notice — `morgorithm.dotoroi.xyz`**
 > This domain is maintained **temporarily** by [`server3342`](https://github.com/server3342). **It may disappear without notice or be transferred to a malicious third party at any time.** **Do not enter sensitive information such as personal data.**
 
-[`plan.md`](plan.md), [`fix.md`](fix.md), [`info.md`](info.md), `upstage.md` — 모두 로컬 작업 노트로 repo 에는 포함되지 않는다.
+`plan.md`, `fix.md`, `info.md`, `upstage.md` — 모두 로컬 작업 노트로 repo 에는 포함되지 않는다.
+
+**📄 산출물 문서:** [기술 보고서](TECHNICAL_REPORT.md) · [개발 과정](DEVELOPMENT_PROCESS.md) · [기여 분석](CONTRIBUTIONS.md) · [발표 슬라이드(PDF)](docs/Morgorithm_PresentationSlides.pdf)
 
 ---
 
@@ -21,10 +23,47 @@
 
 - **LLM (Upstage Solar)** — 자연어 이해 + **함수 호출로 후보 메뉴/원두 실시간 생성** + 도메인 Q&A. 정적 레시피 목록을 주입하지 않고 매 요청 자체 지식으로 떠올린다.
 - **직접 구현 알고리즘** — 점수화 · 정렬 · 다양성 · 그리디 · 블렌딩. LLM 이 만든 후보 위에서 결정적으로 최종 선택.
-- **커피 도메인 Q&A** — "에티오피아 원두 어때?", "콜드브루 어떻게 만들어?" 같은 지식 질문은 종결 도구 `present_answer` 로 분기(`intent="ask"`). 키 없을 때는 [`info.md`](info.md) 다이제스트 기반 결정적 답변으로 폴백.
+- **커피 도메인 Q&A** — "에티오피아 원두 어때?", "콜드브루 어떻게 만들어?" 같은 지식 질문은 종결 도구 `present_answer` 로 분기(`intent="ask"`). 키 없을 때는 `info.md` 다이제스트 기반 결정적 답변으로 폴백.
 - **시연** — 추천 레시피로 강의실에서 실제 추출. 사업화 컨셉은 "원두 구매 시 커미션 수익".
 
-초기에는 단계형 폼 UI + Python FastAPI 백엔드로 출발했으나, 채팅 중심 UX 로 전환하면서 알고리즘을 TypeScript 로 포팅하고 Cloudflare Workers 단일 스택으로 통합했다. 이후 single-shot 프롬프트(라이브러리 주입) 방식에서 **함수 호출 루프(LLM 생성 → 알고리즘 랭킹)** 로 재설계했다(상세 [`plan.md`](plan.md) §50). Python 원형은 [`skeleton/`](skeleton/) 에 보존 — 시연·리포트 목적.
+초기에는 단계형 폼 UI + Python FastAPI 백엔드로 출발했으나, 채팅 중심 UX 로 전환하면서 알고리즘을 TypeScript 로 포팅하고 Cloudflare Workers 단일 스택으로 통합했다. 이후 single-shot 프롬프트(라이브러리 주입) 방식에서 **함수 호출 루프(LLM 생성 → 알고리즘 랭킹)** 로 재설계했다(상세 `plan.md` §50). Python 원형은 [`skeleton/`](skeleton/) 에 보존 — 시연·리포트 목적.
+
+---
+
+## 데모
+
+> 라이브 데모: <https://morgorithm.dotoroi.xyz/> · 작동 방식 시각화: [`/about`](https://morgorithm.dotoroi.xyz/about)
+
+### off-topic 거절 + 추천 한눈에
+
+![Morgorithm 채팅 데모 — off-topic 거절, 추천 카드, 알고리즘 적합도 근거, 원두 힌트](docs/screenshots/demo-chat.png)
+
+- **off-topic 거절** — "파이썬으로 퀵소트 코드 짜줘" 같은 커피와 무관한 입력은 아무 레시피도 만들지 않고 *"저는 커피·음료 메뉴 추천만 도와드릴 수 있어요"* 로 정중히 거절한다.
+- **🎯 추천 근거** — *"산미가 취향에 잘 맞아요 · 적합도 75%"* 처럼, LLM 마케팅 문구가 아니라 **직접 구현한 점수 알고리즘**이 산출한 근거를 사용자가 말한 맛 축 기준으로 한 줄 보여준다.
+
+### 추천 결과 — 다양화 + 하이브리드 + 적합도
+
+![추천 카드 3장 — 카테고리 다양화, 예상 맛 4축, 추천 원두, 라이브러리 조합 배지](docs/screenshots/recommend.png)
+
+LLM 이 생성한 후보를 **점수화 → mergeSort → diversify** 로 추려 서로 다른 카테고리 3장으로 보여준다. 각 카드에 예상 맛 4축(산미·바디감·단맛·쓴맛), 🌱 추천 원두(산지·로스트), 그리고 *"○○ 기반 / ○○ + ○○ 조합"* 같은 라이브러리 조합 배지를 표시한다.
+
+### 레시피 상세 — 카드 클릭 시 펼침
+
+![선택한 메뉴의 추출 단계·파라미터 상세](docs/screenshots/recipe-detail.png)
+
+카드를 누르면 추출 기구별 단계(분쇄·물온도·시간 등)와 원두 힌트가 인라인으로 펼쳐진다.
+
+### 후속 다듬기 (refine)
+
+![후속 요청에 대한 변형(mod)·대안(alt) 카드](docs/screenshots/refine.png)
+
+"더 진하게", "우유 줄여줘" 같은 후속 한 줄에 대해 고른 메뉴를 살짝 바꾼 **변형(🛠️ 이 메뉴에 추가)** 과 **대안(↪️ 다른 메뉴 추천)** 을 같은 알고리즘 파이프라인으로 만든다.
+
+### 라이트 / 다크 테마
+
+| 다크 | 라이트 |
+|------|--------|
+| ![다크 테마 시작 화면](docs/screenshots/theme-dark.png) | ![라이트 테마 시작 화면](docs/screenshots/theme-light.png) |
 
 ---
 

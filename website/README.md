@@ -1,42 +1,44 @@
-# sv
+# Morgorithm — website (SvelteKit + Cloudflare Workers)
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+이 디렉터리는 *Morgorithm* 의 운영 스택(프론트엔드 + 서버 라우트)이다. 프로젝트 개요·아키텍처·
+알고리즘 설명·데모는 저장소 루트의 [`../README.md`](../README.md) 를 참고할 것.
 
-## Creating a project
-
-If you're seeing this, you've probably already done this step. Congrats!
-
-```sh
-# create a new project
-npx sv create my-app
-```
-
-To recreate this project with the same configuration:
+## 실행
 
 ```sh
-# recreate this project
-npx sv@0.15.3 create --template minimal --types ts --add eslint tailwindcss="plugins:typography,forms" mcp="ide:claude-code+setup:local" --install npm website
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
+npm install
+npm run dev          # 로컬 (포트 5173)
 npm run dev -- --open
+
+# Upstage Solar 키는 선택 — 없어도 규칙 폴백으로 전체 동작
+echo 'UPSTAGE_API_KEY="..."' > .dev.vars
 ```
 
-## Building
-
-To create a production version of your app:
+## 검증 · 빌드 · 배포
 
 ```sh
-npm run build
+npm run check        # svelte-check (타입)
+npm run lint         # eslint
+npm run build        # 프로덕션 빌드
+npm run deploy       # Cloudflare Workers 배포 (wrangler)
 ```
 
-You can preview the production build with `npm run preview`.
+> 배포 환경에서는 `.dev.vars` 가 아니라 Worker secret 으로 키를 주입한다:
+> `npx wrangler secret put UPSTAGE_API_KEY`
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+## 구조 (요약)
+
+```
+src/
+├── routes/
+│   ├── +page.svelte                 # 채팅 페이지
+│   ├── about/+page.svelte           # 작동 방식 (인터랙티브 플로우차트)
+│   └── api/chat/{propose,refine}    # 추천·후속 다듬기 (함수 호출 루프)
+└── lib/
+    ├── algorithms/   sorting · score · diversify · greedy · blend  (from-scratch)
+    ├── server/       upstage · tools · validate · recipe-generator · security · ratelimit
+    ├── types/        taste · brew · recipe · menu · constraints · proposal
+    └── components/   Composer · ChatBubble · ProposalCards · RecipeDetail
+```
+
+자세한 알고리즘·API 표는 루트 [`../README.md`](../README.md) 와 [`../TECHNICAL_REPORT.md`](../TECHNICAL_REPORT.md) 참고.
