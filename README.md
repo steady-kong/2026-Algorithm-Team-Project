@@ -1,15 +1,15 @@
-# Morgorithm
+# 한잔픽 (Hanjan Pick)
 
 > 자연어 한 줄로 취향을 말하면 LLM 이 **함수 호출(tool use)로 후보 메뉴를 실시간 생성**하고, **직접 구현한 알고리즘**(표준 정렬·맵 미사용)이 점수화·정렬·다양성·블렌딩으로 최종 3장을 고르는 SvelteKit 웹앱.
 
-**🔗 배포 / Live demo: <https://morgorithm.dotoroi.xyz/>** · 2026 Algorithm Team Project
+**🔗 배포 / Live demo: <https://hanjan-pick.steady11317.workers.dev/>** · 2026 Algorithm Team Project · 팀 Morgorithm
 
 > [!WARNING]
-> **보안 주의 — `morgorithm.dotoroi.xyz`**
-> 이 도메인은 [`server3342`](https://github.com/server3342) 가 **임시로** 유지·관리하는 것으로, **사전 통보 없이 사라지거나 악의적인 제3자에게 소유권이 넘어갈 수 있다.** 따라서 **개인정보 등 민감한 정보는 절대 입력하지 말 것.**
+> **이전 데모 주소 안내 — `morgorithm.dotoroi.xyz`**
+> 이 주소는 더 이상 운영 데모가 아닙니다. 새 데모는 위의 `hanjan-pick.steady11317.workers.dev` 주소를 사용하세요. 현재 배포 주소는 임시 주소입니다. 민감한 정보는 입력하지 마세요.
 >
-> **Security notice — `morgorithm.dotoroi.xyz`**
-> This domain is maintained **temporarily** by [`server3342`](https://github.com/server3342). **It may disappear without notice or be transferred to a malicious third party at any time.** **Do not enter sensitive information such as personal data.**
+> **Previous demo address — `morgorithm.dotoroi.xyz`**
+> This is no longer the live demo. Use the `hanjan-pick.steady11317.workers.dev` link above. The current deployment URL is temporary. Do not enter sensitive information.
 
 `plan.md`, `fix.md`, `info.md`, `upstage.md` — 모두 로컬 작업 노트로 repo 에는 포함되지 않는다.
 
@@ -32,11 +32,11 @@
 
 ## 데모
 
-> 라이브 데모: <https://morgorithm.dotoroi.xyz/> · 작동 방식 시각화: [`/about`](https://morgorithm.dotoroi.xyz/about)
+> 라이브 데모: <https://hanjan-pick.steady11317.workers.dev/> · 작동 방식 시각화: [`/about`](https://hanjan-pick.steady11317.workers.dev/about)
 
 ### off-topic 거절 + 추천 한눈에
 
-![Morgorithm 채팅 데모 — off-topic 거절, 추천 카드, 알고리즘 적합도 근거, 원두 힌트](docs/screenshots/demo-chat.png)
+![한잔픽 채팅 데모 — off-topic 거절, 추천 카드, 알고리즘 적합도 근거, 원두 힌트](docs/screenshots/demo-chat.png)
 
 - **off-topic 거절** — "파이썬으로 퀵소트 코드 짜줘" 같은 커피와 무관한 입력은 아무 레시피도 만들지 않고 *"저는 커피·음료 메뉴 추천만 도와드릴 수 있어요"* 로 정중히 거절한다.
 - **🎯 추천 근거** — *"산미가 취향에 잘 맞아요 · 적합도 75%"* 처럼, LLM 마케팅 문구가 아니라 **직접 구현한 점수 알고리즘**이 산출한 근거를 사용자가 말한 맛 축 기준으로 한 줄 보여준다.

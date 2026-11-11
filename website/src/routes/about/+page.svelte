@@ -464,7 +464,7 @@
 	onDestroy(clearTimer);
 </script>
 
-<svelte:head><title>작동 방식 — Morgorithm</title></svelte:head>
+<svelte:head><title>작동 방식 — 한잔픽</title></svelte:head>
 
 <div class="flex flex-col gap-5">
 	<header class="flex flex-col gap-2">

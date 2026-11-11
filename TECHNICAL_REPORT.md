@@ -1,4 +1,4 @@
-# Technical Report — *Morgorithm*
+# Technical Report — *Hanjan Pick (한잔픽)*
 
 > A chat-based coffee recommender where an LLM generates candidates and
 > **algorithms implemented from scratch make the final decision.**
@@ -7,7 +7,7 @@
 > 후보 메뉴를 실시간 생성하고, 직접 구현한 알고리즘(정렬·점수화·다양성·그리디·블렌딩)이
 > 최종 3장을 고른다. "LLM은 생성, 알고리즘이 결정"이 설계 핵심이다.
 
-- **Live demo:** <https://morgorithm.dotoroi.xyz/>
+- **Live demo:** <https://hanjan-pick.steady11317.workers.dev/>
 - **Repository:** GitHub (public)
 - **Course:** 2026 Algorithm Team Project
 
@@ -18,7 +18,7 @@
 **한국어 요약:** 알고리즘 수업 취지를 살려, 데이터는 LLM이 실시간 생성하되 점수화·정렬·선택은
 직접 구현한 알고리즘이 맡는다.
 
-Morgorithm is a single-page chat application for coffee menu recommendation. A user
+Hanjan Pick is a single-page chat application for coffee menu recommendation. A user
 describes a craving in one line ("something sweet and creamy, warm"); the system replies
 with three recipe cards, each carrying an **algorithmic rationale** and a recommended bean.
 The defining principle is a strict division of labor:

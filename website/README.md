@@ -1,6 +1,6 @@
-# Morgorithm — website (SvelteKit + Cloudflare Workers)
+# 한잔픽 (Hanjan Pick) — website (SvelteKit + Cloudflare Workers)
 
-이 디렉터리는 *Morgorithm* 의 운영 스택(프론트엔드 + 서버 라우트)이다. 프로젝트 개요·아키텍처·
+이 디렉터리는 *한잔픽 (Hanjan Pick)* 의 운영 스택(프론트엔드 + 서버 라우트)이다. 프로젝트 개요·아키텍처·
 알고리즘 설명·데모는 저장소 루트의 [`../README.md`](../README.md) 를 참고할 것.
 
 ## 실행

@@ -20,7 +20,7 @@
 			<!-- /about 이 생기며 로고 → 홈 링크가 의미를 가진다. -->
 			<a href="/" class="flex items-center gap-2 text-on-background">
 				<span class="text-xl" aria-hidden="true">☕</span>
-				<span class="m3-title">커피 레시피 추천</span>
+				<span class="m3-title">한잔픽</span>
 			</a>
 			<div class="flex items-center gap-1">
 				<a
